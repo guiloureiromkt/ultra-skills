@@ -540,7 +540,9 @@ function auditPage(pageUrl, html, headers, ctx) {
   // Sem isso o dono do site não sabe se alguém entrou, de onde veio, nem se o
   // trabalho de SEO deu resultado. É o instrumento, não um extra.
   const ANALYTICS = [
-    { id: "GA4", re: /gtag\/js\?id=(G-[A-Z0-9]+)|['"](G-[A-Z0-9]{6,})['"]/g },
+    // GT- é o "Google Tag" novo; funciona igual ao G- e é o que o WordPress
+    // costuma emitir. Faltando ele, site medido virava site "sem medição".
+    { id: "GA4", re: /gtag\/js\?id=(G[T]?-[A-Z0-9]+)|['"](G[T]?-[A-Z0-9]{6,})['"]/g },
     { id: "Google Tag Manager", re: /(GTM-[A-Z0-9]{4,})/g },
     { id: "Google Analytics (Universal, descontinuado)", re: /(UA-\d{4,}-\d+)/g },
     { id: "Plausible", re: /plausible\.io\/js/g },
@@ -552,6 +554,16 @@ function auditPage(pageUrl, html, headers, ctx) {
     { id: "Meta Pixel", re: /connect\.facebook\.net\/[^"']*fbevents/g },
     { id: "Vercel Analytics", re: /_vercel\/insights|@vercel\/analytics/g },
   ];
+  // Guarda os scripts do próprio domínio: se a medição não estiver no HTML, ela
+  // pode estar DENTRO de um deles. É o padrão de quem carrega analytics só
+  // depois do aceite de cookies — correto pela LGPD, e invisível pra quem só
+  // lê o HTML servido. Sem isso o auditor acusa "sem medição" num site medido.
+  p.scriptSrcs = tags(H, "script")
+    .map((s) => attr(s.attrs, "src"))
+    .filter((s) => s && !/^https?:\/\//i.test(s))
+    .map((s) => { try { return new URL(s, pageUrl).toString(); } catch { return null; } })
+    .filter(Boolean);
+
   p.analytics = [];
   for (const a of ANALYTICS) {
     a.re.lastIndex = 0;
@@ -1227,13 +1239,49 @@ function writeReports(outDir, payload) {
     if (tables / live.length >= 0.5) ok("geo", "structured.data", "P1", "Metade ou mais das páginas usa tabela/lista (formato que a IA levanta inteiro)");
     else bad("geo", "structured.data", "P1", `Só ${tables}/${live.length} páginas usam tabela ou lista`, "Conteúdo comparativo ou enumerável em tabela/lista tem chance bem maior de ser citado — a IA reconhece como dado, não como prosa.");
   }
+  // ---- a medição pode estar escondida num .js do próprio site --------------
+  // Só vale a pena buscar quando o HTML não revelou nada. É uma rodada extra de
+  // rede pra não cometer o erro mais caro que este auditor pode cometer: dizer
+  // "você não tem medição" pra quem tem.
+  let analyticsEmScript = [];
+  const jaTemNoHtml = live.some((p) => (p.analytics || []).length);
+  if (live.length && !jaTemNoHtml && args.url) {
+    const srcs = [...new Set(live.flatMap((p) => p.scriptSrcs || []))].slice(0, 12);
+    const SINAIS = [
+      { id: "GA4 / Google Tag", re: /\b(G[T]?-[A-Z0-9]{6,})\b/ },
+      { id: "Google Tag Manager", re: /\b(GTM-[A-Z0-9]{4,})\b/ },
+      { id: "Plausible", re: /plausible\.io\/js/ },
+      { id: "Umami", re: /umami\.[a-z.]+\/script/ },
+      { id: "Microsoft Clarity", re: /clarity\.ms\/tag/ },
+      { id: "Meta Pixel", re: /fbevents|fbq\(/ },
+    ];
+    const lidos = await pool(srcs, 4, async (u) => {
+      const r = await fetchChain(u);
+      return { u, body: (r.body || "").slice(0, 200000) };
+    });
+    for (const { u, body } of lidos) {
+      if (!body) continue;
+      for (const s of SINAIS) {
+        const m = body.match(s.re);
+        if (m) analyticsEmScript.push({ id: `${s.id} (${m[1] || "detectado"})`, arquivo: u.split("/").pop() });
+      }
+    }
+    analyticsEmScript = analyticsEmScript.filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i);
+  }
+
   // ---- medição, no nível do site (uma conclusão só, não uma por página) -----
   if (live.length) {
     const tools = [...new Set(live.flatMap((p) => (p.analytics || []).map((a) => a.tool)))];
     const cobertura = live.filter((p) => (p.analytics || []).length).length;
-    if (!tools.length) {
-      bad("medicao", "analytics.installed", "P0", "Nenhuma ferramenta de medição instalada no site",
-        "Não há Google Analytics, Tag Manager, Plausible, Umami nem qualquer outro contador. Ninguém sabe quantas pessoas visitam, de onde vêm, o que leem ou onde desistem. Todo o trabalho de SEO e GEO fica sem termômetro: dá pra melhorar o site, mas não dá pra saber se melhorou. É o primeiro item a resolver, e é grátis.");
+    if (!tools.length && analyticsEmScript.length) {
+      // Achado no arquivo .js do próprio site: está instalado, só carrega depois.
+      ok("medicao", "analytics.installed", "P0", `Medição instalada via script do site: ${analyticsEmScript.map((x) => x.id).join(", ")}`);
+      bad("medicao", "analytics.deferred", "P2", "Medição carrega por JavaScript, não pelo HTML",
+        `Encontrada em ${analyticsEmScript.map((x) => x.arquivo).join(", ")} — padrão normal de quem só ativa o contador depois do aceite de cookies (correto pela LGPD). O efeito colateral é que visitante que recusa cookies não é contado, então o número real de visitas é maior que o do relatório. Confirme no relatório Tempo real do Analytics que a coleta acontece de fato.`,
+        analyticsEmScript.map((x) => `${x.arquivo}: ${x.id}`).join("\n"));
+    } else if (!tools.length) {
+      bad("medicao", "analytics.installed", "P0", "Nenhuma ferramenta de medição detectada",
+        "Não foi encontrado Google Analytics, Tag Manager, Plausible, Umami nem qualquer outro contador — nem no HTML servido, nem nos scripts do próprio site. Ninguém sabe quantas pessoas visitam, de onde vêm, o que leem ou onde desistem. Todo o trabalho de SEO e GEO fica sem termômetro: dá pra melhorar o site, mas não dá pra saber se melhorou. É o primeiro item a resolver, e é grátis.");
     } else {
       ok("medicao", "analytics.installed", "P0", `Medição instalada: ${tools.join(", ")}`);
       if (cobertura < live.length) {
