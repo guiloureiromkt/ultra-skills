@@ -1,0 +1,50 @@
+{
+  "_leia": "Termos que denunciam que o site herdou o texto de OUTRA marca. O auditor ignora automaticamente o grupo inteiro quando a marca declarada em --brand (ou o dominio) pertence a ele, e o --allow libera mencao intencional a terceiro. Ao auditar um site nascido de um molde novo, ACRESCENTE aqui os termos daquele molde: e o que faz o teste pegar o residuo no proximo site em vez de depender de alguem reparar. Cicatriz de origem: um site no ar com llms.txt descrevendo o negocio da empresa de onde o molde veio, de setor completamente diferente.",
+  "motors": {
+    "motor-de-sites (3mais)": [
+      "3mais",
+      "3mAIs",
+      "agência de comunicação e marketing",
+      "25 anos de estrada",
+      "Trends/Ja!",
+      "Ja!",
+      "social CRM",
+      "data intelligence",
+      "fazemos mais pela experiência",
+      "Como fazemos mais?",
+      "a proximidade faz diferença",
+      "apostamos na multidisciplinaridade",
+      "portfólio de trabalhos por setor e capability",
+      "relatórios de tendências",
+      "a agência, o time e o jeito de trabalhar",
+      "marcas nacionais e internacionais de diversos setores"
+    ],
+    "guiloureiro / GuiOS": [
+      "Gui Loureiro",
+      "guiloureiro.com.br",
+      "Escada de Maturidade em IA",
+      "Seguindo a Manada",
+      "construtor-mentor",
+      "GuiOS",
+      "Superhumanos"
+    ],
+    "moldes genéricos de tema": [
+      "Your Company Name",
+      "Lorem ipsum",
+      "Acme Inc",
+      "Awesome Startup",
+      "Powered by Vercel",
+      "Deploy your Next.js",
+      "Get started by editing",
+      "Save and see your changes instantly"
+    ]
+  },
+  "generic": [
+    "lorem ipsum",
+    "texto de exemplo",
+    "insira seu texto",
+    "coloque aqui",
+    "descrição do serviço aqui",
+    "placeholder"
+  ]
+}

@@ -1,0 +1,21 @@
+# saída de auditoria (cada rodada gera; não versionar)
+audit/
+auditoria/
+**/audit-report.json
+**/AUDITORIA.md
+**/PROGRESSO.md
+
+# dependências (instaladas sob demanda — ver o README de cada skill)
+node_modules/
+package-lock.json
+
+# segredos — o token do Replicate vive em variável de ambiente, nunca em arquivo
+.env
+.env.*
+!.env.example
+
+# lixo de sistema
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
