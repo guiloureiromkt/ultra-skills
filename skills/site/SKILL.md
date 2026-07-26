@@ -1,5 +1,5 @@
 ---
-name: ultra-site
+name: site
 description: Cria SITES premium (landing, marca, portfólio, produto) no método "Claude Design 2.0" — engenharia reversa do website-builder do Higgsfield, rodando 100% local com Replicate como motor de assets. Use SEMPRE que o Gui pedir "ultra-site", "cria um site", "landing page premium", "site animado", "site tipo Higgsfield/Claude Design", "site com scroll cinematográfico", "faz o site da marca X", ou quiser um site novo com direção de arte de verdade (não template). O design é decidido como IMAGENS (reference boards gerados por seção), o visual é um kit de assets 100% bespoke (hero, texturas, ícones, logo, OG, vídeo-scrub), o código é fiel aos boards, e nada é "done" sem gate mecânico + review adversarial por screenshot. NÃO é pra landing WP do guiloureiro.com.br (use gndm-novo-material), nem redesign de página WP (gndm-page-redesign), nem clonar app existente (clone-webapp), nem deck (ultra-deck), nem carrossel (ultra-carrossel).
 ---
 
@@ -7,7 +7,7 @@ description: Cria SITES premium (landing, marca, portfólio, produto) no método
 
 Réplica local do motor que faz a trend "Claude Design 2.0 + Higgsfield": um **pipeline de 7 fases com gates** onde o design é decidido como **imagens geradas** antes de qualquer código. A barra: *"um site de estúdio de US$ 40k na primeira tentativa"*. "Limpo mas genérico" = falha.
 
-> Caminho-base: a pasta desta skill (`~/.claude/skills/ultra-site/`).
+> Caminho-base: a pasta desta skill (`skills/site/`).
 >
 > ⚠️ **Dependência paga, sem modo grátis.** As imagens são geradas no Replicate (pago por uso): **US$ 5 a 15 por site**, mais caro com vídeo de hero. Precisa de `REPLICATE_API_TOKEN` no ambiente.
 >
@@ -52,7 +52,7 @@ Checklist grep de `references/review-rubric.md §A` (adaptado local): placeholde
 `node scripts/screenshot.js <index.html> <out_dir>` → full-page 1440 e 390. Ler os 2 PNGs e gradear a rubrica §B (9 itens: squint test · hero · hierarquia de tipo · trava de paleta · variância de layout · integração dos assets · densidade/copy · mobile · **fidelidade board-a-board**) como revisor cético. TODOS os fails → 1 batch fix → re-screenshot 1×. Entregar: pasta do site + screenshots + 1 frase de conceito + o que ficou honestamente de fora + **caminho absoluto em texto puro**. Registrar o build no ledger. Oferecer: ajustes · deploy VPS · variações.
 
 ### 8 · Auditoria GEO/SEO/código (obrigatória antes de chamar de entregue)
-Screenshot bonito prova que o site **parece** certo; não prova que o Google entende, que a IA cita, nem que o código aguenta. Invocar a skill **`ultra-auditoria`** apontando pra pasta do projeto (`--dir`) — e pra URL, se já estiver no ar. Ela roda o gate mecânico (title/canonical/schema/robots/sitemap/llms.txt/resíduo de molde/varredura de código), pontua 5 eixos e re-roda em loop até zero P0 e todos os eixos ≥90. **Site com resíduo de molde ou llms.txt errado não é entrega** — é o site contando a história de outra marca (cicatriz 2026-07-25). O `llms.txt` e o head kit da Fase 3 nascem aqui já corretos: gerados a partir do brief, nunca copiados de outro projeto.
+Screenshot bonito prova que o site **parece** certo; não prova que o Google entende, que a IA cita, nem que o código aguenta. Invocar a skill **`ultra:auditoria`** apontando pra pasta do projeto (`--dir`) — e pra URL, se já estiver no ar. Ela roda o gate mecânico (title/canonical/schema/robots/sitemap/llms.txt/resíduo de molde/varredura de código), pontua 5 eixos e re-roda em loop até zero P0 e todos os eixos ≥90. **Site com resíduo de molde ou llms.txt errado não é entrega** — é o site contando a história de outra marca (cicatriz 2026-07-25). O `llms.txt` e o head kit da Fase 3 nascem aqui já corretos: gerados a partir do brief, nunca copiados de outro projeto.
 
 ## Referências (ordem de leitura)
 0. `references/replicate-setup.md` — a dependência paga: por que é obrigatória, quanto custa, como configurar, como não gastar à toa, e quando esta skill **não** é a ferramenta certa. Ler na Fase 0 se o token não estiver configurado.

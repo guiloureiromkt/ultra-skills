@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ultra-skills",
+  "description": "Skills de Claude Code, em português, para construir sites com direção de arte e auditar SEO, GEO, medição e código.",
+  "owner": {
+    "name": "Gui Loureiro",
+    "url": "https://guiloureiro.com.br"
+  },
+  "plugins": [
+    {
+      "name": "ultra",
+      "description": "ultra:site constrói o site decidindo o design como imagem antes do código. ultra:auditoria mede se o Google entende, se a IA cita, se o Analytics existe e se o formulário entrega o lead — e corrige em loop.",
+      "author": { "name": "Gui Loureiro" },
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

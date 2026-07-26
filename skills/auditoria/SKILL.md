@@ -1,6 +1,6 @@
 ---
-name: ultra-auditoria
-description: Audita um site inteiro em GEO (ser citado por ChatGPT/Perplexity/Gemini/Claude), SEO (técnico + conteúdo), MEDIÇÃO (Google Analytics instalado? formulário entrega o lead ou finge enviar?) e review de código — e RE-RODA em loop corrigindo até bater a nota-alvo, guiando o dono do site (mesmo leigo) a criar conta de Analytics e Search Console. Use SEMPRE que pedirem "audita o site X", "roda a auditoria no site", "checa o SEO/GEO de <domínio>", "meu site não aparece no ChatGPT", "por que não ranqueio", "review de código do site", "melhora a pontuação do site", "o site tem texto de outra marca / sobrou coisa do template", "o site pede chave de API", "meu site tem Google Analytics?", "o formulário está funcionando?", "não chega lead pelo site", "como instalo o Search Console", ou quando um site acabou de ser construído/entregue e precisa passar no crivo antes de virar oficial. Serve site NO AR (URL), pasta estática local e repositório (Next.js, Astro, WordPress, HTML puro — agnóstico de stack), com checks específicos de blog. É a irmã de verificação da `ultra-site` (que CONSTRÓI) — esta AUDITA e CORRIGE qualquer site, inclusive os que não nasceram da ultra-site. NÃO é pra auditar 1 página avulsa de conteúdo (`seo-page`), nem pra planejar keywords do zero (`seo-plan`), nem pra redesenhar visual (`impeccable`/`hallmark`).
+name: auditoria
+description: Audita um site inteiro em GEO (ser citado por ChatGPT/Perplexity/Gemini/Claude), SEO (técnico + conteúdo), MEDIÇÃO (Google Analytics instalado? formulário entrega o lead ou finge enviar?) e review de código — e RE-RODA em loop corrigindo até bater a nota-alvo, guiando o dono do site (mesmo leigo) a criar conta de Analytics e Search Console. Use SEMPRE que pedirem "audita o site X", "roda a auditoria no site", "checa o SEO/GEO de <domínio>", "meu site não aparece no ChatGPT", "por que não ranqueio", "review de código do site", "melhora a pontuação do site", "o site tem texto de outra marca / sobrou coisa do template", "o site pede chave de API", "meu site tem Google Analytics?", "o formulário está funcionando?", "não chega lead pelo site", "como instalo o Search Console", ou quando um site acabou de ser construído/entregue e precisa passar no crivo antes de virar oficial. Serve site NO AR (URL), pasta estática local e repositório (Next.js, Astro, WordPress, HTML puro — agnóstico de stack), com checks específicos de blog. É a irmã de verificação da `ultra:site` (que CONSTRÓI) — esta AUDITA e CORRIGE qualquer site, inclusive os que não nasceram da ultra-site. NÃO é pra auditar 1 página avulsa de conteúdo (`seo-page`), nem pra planejar keywords do zero (`seo-plan`), nem pra redesenhar visual (`impeccable`/`hallmark`).
 ---
 
 # Ultra-Auditoria — o site passa no crivo, ou não é entrega
@@ -16,7 +16,7 @@ E aí **corrige e roda de novo**, até bater a nota — ou até dizer com todas 
 
 A pergunta 3 existe porque as duas piores falhas que esta skill já encontrou num site real não eram de ranking. Eram: **zero medição instalada** (o dono não fazia ideia se alguém visitava) e **um formulário que mostrava "recebemos sua mensagem" e jogava o lead fora** — em todas as páginas, por meses. Nenhuma auditoria de SEO pega isso, e é o que mais custa dinheiro.
 
-> Caminho-base: a pasta desta skill (`~/.claude/skills/ultra-auditoria/`).
+> Caminho-base: a pasta desta skill (`skills/auditoria/`).
 
 ## 🩸 Princípios inquebráveis (lê PRIMEIRO)
 
@@ -169,6 +169,6 @@ Se o molde de origem tinha um defeito que vai se repetir em todo site nascido de
 
 ## Interação com outras skills
 
-- **`ultra-site`** constrói; esta audita. Todo site que sai da ultra-site passa aqui antes de virar entrega (a ultra-site aponta pra cá na Fase 8).
+- **`ultra:site`** constrói; esta audita. Todo site que sai da ultra-site passa aqui antes de virar entrega (a ultra-site aponta pra cá na Fase 8).
 - Se estiverem instaladas, `seo-geo`, `seo-audit` e `web-quality-audit` complementam com ângulos extras (Lighthouse, keyword research). **Esta skill não depende delas** — ela é auto-contida de propósito, porque vai pra mão de mentorado que pode não ter esse arsenal.
 - Auditoria de **uma página só** de conteúdo → `seo-page`. **Plano de keywords do zero** → `seo-plan`. **Problema é visual, não de ranking** → `impeccable` / `hallmark`.
