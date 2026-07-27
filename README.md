@@ -1,6 +1,6 @@
-# Ultra Skills — construa um site com direção de arte, e depois prove que ele funciona
+# Ultra Skills — as ferramentas que eu uso, abertas e em português
 
-**Duas skills de [Claude Code](https://claude.com/claude-code) que trabalham em par. A `ultra:site` constrói um site decidindo o design como imagem antes de escrever uma linha de código. A `ultra:auditoria` pega um site que já existe — feito por qualquer um, em qualquer stack — e mede se o Google entende, se a IA cita, se o Analytics está instalado e se o formulário realmente entrega o contato. Depois corrige e roda de novo, até a nota subir.** São gratuitas, abertas, e escritas em português.
+**Cinco skills de [Claude Code](https://claude.com/claude-code). Duas trabalham em par para sites: a `ultra:site` constrói decidindo o design como imagem antes de escrever uma linha de código, e a `ultra:auditoria` mede se o Google entende, se a IA cita, se o Analytics está instalado e se o formulário realmente entrega o contato. As outras três resolvem escrita, presença no LinkedIn e diagnóstico de negócio.** Todas gratuitas, abertas, em português.
 
 Elas existem porque eu precisei delas na minha própria operação. Não são demonstração.
 
@@ -47,9 +47,31 @@ E tem uma regra que atravessa tudo: **o que não deu pra medir vira "não medido
 
 ---
 
+## As outras três
+
+Estas não têm nada a ver com site. São as que eu uso todo dia e que funcionam para qualquer pessoa — inclusive fora do Claude Code: cada uma é um arquivo autossuficiente que também roda em Claude Projects ou ChatGPT, se for o seu caso.
+
+### ✍️ `ultra:humanizer` — tira a cara de IA do texto
+
+Audita 24 categorias de padrão de escrita de LLM (baseado no [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) da Wikipedia, adaptado para o português) e devolve uma nota de 0 a 100 mais o diagnóstico trecho a trecho: qual padrão, onde, por que soa artificial.
+
+Não reescreve por cima da sua voz. Ele mostra o que encontrou, explica a regra, oferece alternativas, e você decide. O texto continua seu — só sai o vício de máquina.
+
+> Este README passou por ele. Score foi de 72 para 89: seis travessões, um contraste binário declamatório e dois "rule of three" decorativos.
+
+### 💼 `ultra:linkedin` — motor de conteúdo com a sua voz, não a minha
+
+Começa entrevistando você para calibrar voz, público e território — depois escreve dentro disso. A calibração é sua; a skill só carrega o método.
+
+### 🔍 `ultra:diagnostico` — o negócio em 6 dimensões
+
+Diagnóstico estruturado em seis dimensões, do jeito que eu faço em consultoria. Serve para qualquer negócio, de qualquer setor e tamanho. Sai um retrato com prioridades, não uma lista de boas intenções.
+
+---
+
 ## Como instalar (um comando)
 
-Estas skills são um **plugin do Claude Code**. Você adiciona o repositório uma vez e recebe as duas — e toda skill que eu publicar depois chega junto, sem reinstalar nada.
+Estas skills são um **plugin do Claude Code**. Você adiciona o repositório uma vez e recebe todas — e toda skill que eu publicar depois chega junto, sem reinstalar nada.
 
 No Claude Code:
 
@@ -58,7 +80,7 @@ No Claude Code:
 /plugin install ultra@ultra-skills
 ```
 
-Pronto. As skills passam a se chamar **`ultra:site`** e **`ultra:auditoria`**. É só pedir o que você quer:
+Pronto. Elas passam a se chamar **`ultra:site`**, **`ultra:auditoria`**, **`ultra:humanizer`**, **`ultra:linkedin`** e **`ultra:diagnostico`**. É só pedir o que você quer:
 
 > *Roda a auditoria completa no site www.meusite.com.br. A marca é Fulano Advocacia, o setor é advocacia trabalhista, e o código está na pasta X.*
 
@@ -71,7 +93,7 @@ Baixe o [ZIP do repositório](https://github.com/guiloureiromkt/ultra-skills/arc
 - Windows: `C:\Users\SEU-USUARIO\.claude\skills\`
 - Mac/Linux: `~/.claude/skills/`
 
-Renomeie para `ultra-site` e `ultra-auditoria` ao copiar — sem o plugin, o nome da pasta vira o nome da skill, e `site` sozinho é genérico demais. Reabra o Claude Code depois.
+Renomeie com o prefixo ao copiar (`ultra-site`, `ultra-humanizer`…) — sem o plugin, o nome da pasta vira o nome da skill, e `site` ou `humanizer` sozinhos são genéricos demais. Reabra o Claude Code depois.
 </details>
 
 ---
@@ -104,6 +126,16 @@ A tese que sustenta isso: **a fronteira da IA é pra dentro**. Não é sobre usa
 - 📸 [Instagram](https://www.instagram.com/guiloureiro)
 
 ---
+
+## Verificando antes de publicar
+
+Se você for contribuir, rode antes de abrir o PR:
+
+```bash
+node scripts/verificar-publicacao.mjs
+```
+
+Ele varre tudo procurando caminho de máquina, referência a vault pessoal, credencial, endereço interno e nome de pessoa real. Existe porque essa varredura já pegou cinco vazamentos neste repositório — nenhum era segredo técnico, todos eram coisas que fazem sentido na máquina de quem escreveu e nenhum sentido no mundo.
 
 ## Contribuindo
 

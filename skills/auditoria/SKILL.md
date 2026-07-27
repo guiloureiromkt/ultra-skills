@@ -149,7 +149,7 @@ Entregar:
 - A seção **"o que depende de você"**.
 - **Caminho absoluto em texto puro** dos arquivos gerados (além do link).
 
-Se o molde de origem tinha um defeito que vai se repetir em todo site nascido dele (foi o caso do resíduo de marca), **corrija no molde também** e diga que corrigiu — senão o próximo site nasce com o mesmo bug. Registrar a cicatriz em `references/cicatrizes-de-molde.md` e, no ambiente do Gui, logar em `C:\GuiOS\GuiOS\90_Meta\Logs\`.
+Se o molde de origem tinha um defeito que vai se repetir em todo site nascido dele (foi o caso do resíduo de marca), **corrija no molde também** e diga que corrigiu — senão o próximo site nasce com o mesmo bug. Registrar a cicatriz em `references/cicatrizes-de-molde.md` — é o que faz o próximo site não repetir o erro.
 
 ## Referências (ordem de leitura)
 

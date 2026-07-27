@@ -2,7 +2,7 @@
 
 GEO = **Generative Engine Optimization**. Traduzindo: SEO otimiza pra aparecer numa *lista de links*; GEO otimiza pra aparecer *dentro da resposta* que o ChatGPT, o Perplexity, o Gemini ou o AI Overview do Google escreve. São problemas diferentes e a diferença importa: hoje a maioria das buscas termina sem clique nenhum, então estar na resposta virou o lugar que antes era o primeiro resultado.
 
-> **Nota de honestidade sobre os números abaixo.** Todos vêm do canon do Gui (`C:\GuiOS\GuiOS\10_Canon\regua-citabilidade-geo.md` · `seo-plan-2026.md`), que os herdou do GEO-bench (Princeton, ago/2024) e do corpus Growth & Performance. São de 2024-2026 e a área muda rápido. **Cite-os com a fonte e a data.** Não invente número novo. Onde não houver dado, o achado é qualitativo — e é dito como qualitativo.
+> **Nota de honestidade sobre os números abaixo.** Todos vêm do GEO-bench (Princeton, ago/2024) e do corpus Growth & Performance, compilados na régua de citabilidade que uso na minha operação. São de 2024-2026 e a área muda rápido. **Cite-os com a fonte e a data.** Não invente número novo. Onde não houver dado, o achado é qualitativo — e é dito como qualitativo.
 
 ---
 

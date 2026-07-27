@@ -73,8 +73,8 @@ Registro dos builds anteriores, pra que o próximo não repita a cara do último
 
 **Onde mora** (o 1º que existir vence):
 1. `$ULTRA_SITE_LEDGER` — se a variável de ambiente estiver setada.
-2. `C:\GuiOS\GuiOS\90_Meta\ultra-site-ledger.md` — o vault do Gui, se existir (estado sempre no vault).
-3. `~/.claude/ultra-site-ledger.md` — o default portátil, criado na hora se não houver.
+2. `./ultra-site-ledger.md` na pasta do projeto, se existir (útil quando o ledger é do time, versionado junto).
+3. `~/.claude/ultra-site-ledger.md` — o default, criado na hora se não houver.
 
 Se não existir, criar com frontmatter (`type: sot`) e uma tabela: data · projeto · família de paleta · pairing de tipo · arquitetura do hero · Tier-1 (ID) · garments de CTA · linguagem de canto. Ler antes do brief, escrever depois da entrega.
 
