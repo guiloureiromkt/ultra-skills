@@ -549,4 +549,15 @@ A cada ciclo de verificação fechado, peça: *"revisa as hipóteses com esses r
 
 ---
 
+## Material de apoio (só no Claude Code)
+
+Este SKILL.md é autossuficiente: funciona sozinho no ChatGPT, no Claude Projects ou colado em qualquer IA. No Claude Code, a pasta traz os dois documentos operacionais que aprofundam as fases:
+
+- **`references/6-dimensoes.md`** — o roteiro de execução da Fase 1, dimensão por dimensão, com a saída esperada de cada uma. Use quando o diagnóstico for para valer e você não puder pular etapa.
+- **`references/hipoteses-priorizadas.md`** — o roteiro da Fase 2: como transformar o briefing em hipóteses ordenadas por impacto sobre esforço, sem virar lista de boas intenções.
+
+Nas outras plataformas, ignore esta seção: o método completo já está acima.
+
+---
+
 *Diagnóstico em 6 Dimensões · Edição Gratuita · método criado por Gui Loureiro, estrategista de marketing com 25+ anos diagnosticando negócios de todos os tamanhos. Versão grátis e generalizada — funciona pra qualquer negócio, de qualquer setor. Veio da newsletter **Seguindo a Manada**, do Gui Loureiro.*

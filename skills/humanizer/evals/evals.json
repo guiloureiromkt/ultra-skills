@@ -1,0 +1,20 @@
+{
+  "skill_name": "humanizer",
+  "evals": [
+    {
+      "id": 1,
+      "name": "diagnostico-pega-patterns-plantados",
+      "prompt": "Audita esses 3 textos (Fase 1 completa, um por um): evals/fixtures/texto-1.md, texto-2.md, texto-3.md. Além da tabela, exporte o diagnóstico em JSON.",
+      "expected_output": "Diagnóstico por texto flagando >=80% dos trechos plantados no gabarito (evals/fixtures/gabarito.json — o agente sob teste NÃO vê o gabarito), com categoria e score 0-100.",
+      "files": ["evals/fixtures/texto-1.md", "evals/fixtures/texto-2.md", "evals/fixtures/texto-3.md"],
+      "assertions": [
+        "Cada texto tem tabela/JSON de diagnóstico com Pattern + Trecho + Severidade e score 0-100",
+        ">=80% dos trechos do gabarito de cada texto aparecem flaggados (match por substring do trecho)",
+        "Em-dash overuse (cat 13) flaggado no texto-1 (3 travessões no 1º parágrafo)",
+        "Tese binária declamatória 9b flaggada no texto-2 ('Um manual descreve. Um sistema executa')",
+        "Elegant variation (cat 11) flaggada no texto-3 (fundador/empreendedor/executivo)",
+        "Nenhum falso-positivo grosseiro: frases neutras ('É por isso que estamos migrando tudo pro novo fluxo') não flaggadas como severidade 3"
+      ]
+    }
+  ]
+}

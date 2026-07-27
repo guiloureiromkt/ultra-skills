@@ -447,4 +447,15 @@ A ideia que explica todos os 24 padrões: **uma IA escreve adivinhando, por esta
 
 ---
 
+## Material de apoio (só no Claude Code)
+
+Este SKILL.md é autossuficiente de propósito: ele funciona sozinho no ChatGPT, no Claude Projects ou colado em qualquer IA. Mas quando roda no Claude Code, a pasta traz mais coisa:
+
+- **`references/cm-pedagogical.md`** — a tabela dos 16 patterns canônicos com a regra por trás de cada um e duas ou três alternativas humanas. É o que a Fase 2 usa para explicar em vez de só corrigir. Consulte quando o usuário perguntar *por que* aquilo soa artificial.
+- **`evals/`** — três textos de teste com gabarito. Servem para conferir se a skill continua pegando o que deveria depois de qualquer alteração. Se você mexer nas categorias, rode contra eles antes de confiar no resultado.
+
+Nas outras plataformas, ignore esta seção: tudo que é essencial já está acima.
+
+---
+
 *Humanizer · Edição Gratuita · auditor de texto feito por Gui Loureiro · curado por IA. Versão grátis e generalizada — você aplica na SUA escrita, e a voz preservada é toda sua. Veio da newsletter **Seguindo a Manada**, do Gui Loureiro.*

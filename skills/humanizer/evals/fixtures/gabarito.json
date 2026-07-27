@@ -1,0 +1,41 @@
+{
+  "_nota": "GABARITO — nunca entregar ao agente sob teste. Cada item: trecho plantado (substring exata do fixture) + categoria esperada (nº do catálogo do SKILL.md). Aprovação: >=80% dos trechos flaggados por texto.",
+  "texto-1": [
+    {"trecho": "serve como um divisor de águas", "categorias": [8, 1]},
+    {"trecho": "Vale ressaltar", "categorias": [1, 22]},
+    {"trecho": "segundo especialistas", "categorias": [5]},
+    {"trecho": "reflete uma tendência mais ampla", "categorias": [1]},
+    {"trecho": "desempenha papel crucial", "categorias": [1, 7]},
+    {"trecho": "Não é apenas uma ferramenta, é uma mudança de paradigma", "categorias": [9]},
+    {"trecho": "Com o intuito de", "categorias": [22]},
+    {"trecho": "panorama em evolução", "categorias": [1, 7]},
+    {"trecho": "clareza, propósito e direção", "categorias": [10]},
+    {"trecho": "fomentando a colaboração e destacando a importância", "categorias": [3]},
+    {"trecho": "ecossistema robusto", "categorias": [7]},
+    {"trecho": "O futuro é promissor", "categorias": [24]}
+  ],
+  "texto-1_extra": {"em_dash_overuse": "3 travessões no 1º parágrafo — categoria 13 deve ser flaggada"},
+  "texto-2": [
+    {"trecho": "🚀", "categorias": [17]},
+    {"trecho": "Atualização Importante Sobre O Novo Processo", "categorias": [16]},
+    {"trecho": "ótima notícia", "categorias": [21]},
+    {"trecho": "Um manual descreve. Um sistema executa", "categorias": [9]},
+    {"trecho": "Adicionalmente", "categorias": [7]},
+    {"trecho": "é importante notar que", "categorias": [22]},
+    {"trecho": "configura-se como", "categorias": [8]},
+    {"trecho": "do briefing ao relatório final, das reuniões às aprovações", "categorias": [12]},
+    {"trecho": "pode possivelmente talvez reduzir em algum grau", "categorias": [23]},
+    {"trecho": "**Velocidade:**", "categorias": [15, 14]},
+    {"trecho": "Espero que isso ajude", "categorias": [19]}
+  ],
+  "texto-3": [
+    {"trecho": "Aninhada no coração do", "categorias": [4]},
+    {"trecho": "consolida-se como referência absoluta", "categorias": [8, 4]},
+    {"trecho": "império vibrante", "categorias": [4, 7]},
+    {"trecho": "O fundador construiu", "categorias": [11], "nota": "elegant variation: fundador/empreendedor/executivo = mesma pessoa"},
+    {"trecho": "Observadores notam", "categorias": [5]},
+    {"trecho": "À medida que avançamos", "categorias": [6]},
+    {"trecho": "apesar dos desafios", "categorias": [6]},
+    {"trecho": "Esse é um passo na direção certa", "categorias": [24]}
+  ]
+}
