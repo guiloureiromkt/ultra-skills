@@ -162,6 +162,14 @@ function attr(attrs, name) {
   const m = attrs.match(new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s"'>]+))`, "i"));
   return m ? (m[2] ?? m[3] ?? m[4] ?? "") : null;
 }
+/** Escapa metacaractere antes de interpolar valor do SITE dentro de RegExp.
+ * O site é entrada não-confiável: um `id="items[]"` ou `id="preco(2024)"` vira
+ * regex inválida e derruba a auditoria inteira. (cicatriz 2026-07-28) */
+const escapeRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** RegExp a partir de valor do site — nunca lança; regex ruim vira "não achei". */
+function safeRe(source, flags) {
+  try { return new RegExp(source, flags); } catch { return null; }
+}
 const ENT = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&apos;": "'", "&nbsp;": " ", "&mdash;": "—", "&ndash;": "–" };
 const decode = (s) => String(s || "")
   .replace(/&[a-z#0-9]+;/gi, (e) => ENT[e.toLowerCase()] ?? e)
@@ -576,7 +584,8 @@ function auditPage(pageUrl, html, headers, ctx) {
   // Medição duplicada conta cada visita duas vezes — todo relatório fica mentindo.
   for (const a of p.analytics) {
     for (const id of a.ids) {
-      const n = (H.match(new RegExp(id.replace(/[-]/g, "\\-"), "g")) || []).length;
+      const reId = safeRe(escapeRe(id), "g");
+      const n = reId ? (H.match(reId) || []).length : 0;
       if (n > 2) add("P1", `Código de medição ${id} aparece ${n}× na mesma página — visita contada em dobro deixa todo relatório errado pra cima`, id);
     }
   }
@@ -598,8 +607,17 @@ function auditPage(pageUrl, html, headers, ctx) {
     const invisivel = (i) => /type=["'](hidden|submit|button|reset|image)["']/i.test(i.attrs) ||
       /\bhidden\b/i.test(i.attrs) || /display\s*:\s*none|visibility\s*:\s*hidden/i.test(attr(i.attrs, "style") || "");
     const inputs = todos.filter((i) => !invisivel(i));
+    // O `id` vem do site: `id="items[]"` ou `id="cep (opcional)"` são HTML válido
+    // e viram regex inválida. Escapa + safeRe: campo com id exótico no máximo
+    // aparece como "sem rótulo", nunca mata a auditoria no meio.
+    const temLabelFor = (i) => {
+      const id = attr(i.attrs, "id");
+      if (!id) return false;
+      const re = safeRe(`for=["']${escapeRe(id)}["']`);
+      return re ? re.test(f.inner) : false;
+    };
     const labeled = inputs.filter((i) => attr(i.attrs, "aria-label") || attr(i.attrs, "aria-labelledby") ||
-      attr(i.attrs, "title") || (attr(i.attrs, "id") && new RegExp(`for=["']${attr(i.attrs, "id")}["']`).test(f.inner)));
+      attr(i.attrs, "title") || temLabelFor(i));
     const named = inputs.filter((i) => attr(i.attrs, "name"));
     const form = {
       action: action || null,
@@ -731,21 +749,76 @@ function discoverFromDir(dir, max) {
 }
 
 // -------------------------------------------------------- site-level --------
+/**
+ * Fatia o robots.txt em grupos, do jeito que o crawler lê: um ou mais
+ * `User-agent:` seguidos das regras que valem PRA ELES, até o próximo grupo.
+ *
+ * Cicatriz 2026-07-28: a checagem antiga era uma regex que varria o arquivo
+ * inteiro procurando `Disallow: /` até 120 chars depois do nome do bot. Ela
+ * atravessava a fronteira do bloco — um `Disallow: /` de OUTRO user-agent
+ * logo abaixo fazia o bot ser reportado como bloqueado. Isso virou um P0
+ * falso num relatório entregue a cliente. Agora cada bloco é avaliado sozinho.
+ */
+function parseRobotsGroups(txt) {
+  const groups = [];
+  let atual = null, ultimaFoiAgent = false;
+  for (const raw of String(txt || "").split(/\r?\n/)) {
+    const linha = raw.replace(/#.*$/, "").trim();
+    if (!linha) continue;
+    const m = linha.match(/^([A-Za-z-]+)\s*:\s*(.*)$/);
+    if (!m) continue;
+    const campo = m[1].toLowerCase();
+    const valor = m[2].trim();
+    if (campo === "user-agent") {
+      // User-agents consecutivos compartilham o mesmo bloco de regras.
+      if (!atual || !ultimaFoiAgent) { atual = { agents: [], rules: [] }; groups.push(atual); }
+      atual.agents.push(valor.toLowerCase());
+      ultimaFoiAgent = true;
+      continue;
+    }
+    ultimaFoiAgent = false;
+    if (!atual) continue; // diretiva fora de grupo (Sitemap:, Host:) — não é regra de bot
+    atual.rules.push({ field: campo, value: valor });
+  }
+  return groups;
+}
+
+/** Os grupos que valem pra este user-agent (nome exato, como o robots.txt exige). */
+const gruposDe = (groups, agent) => groups.filter((g) => g.agents.includes(String(agent).toLowerCase()));
+
+/** O grupo fecha o site inteiro? `Allow: /` no mesmo grupo cancela o `Disallow: /`. */
+function grupoBloqueiaTudo(g) {
+  const bloqueiaRaiz = g.rules.some((r) => r.field === "disallow" && r.value === "/");
+  if (!bloqueiaRaiz) return false;
+  const liberaRaiz = g.rules.some((r) => r.field === "allow" && (r.value === "/" || r.value === "/*"));
+  return !liberaRaiz;
+}
+
 function auditRobots(site) {
   const AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "anthropic-ai", "PerplexityBot", "Perplexity-User", "Google-Extended", "CCBot", "Applebot-Extended", "meta-externalagent", "Bytespider", "Amazonbot"];
   if (!site.robots) { bad("seo_tecnico", "robots.exists", "P1", "Sem robots.txt", "Sem robots.txt o crawler não recebe nenhuma diretriz e o sitemap não é anunciado."); return; }
   ok("seo_tecnico", "robots.exists", "P1", "robots.txt existe");
-  if (/^\s*user-agent:\s*\*\s*$[\s\S]{0,200}?^\s*disallow:\s*\/\s*$/im.test(site.robots)) {
+  const groups = parseRobotsGroups(site.robots);
+  const bloqueioGeral = gruposDe(groups, "*").some(grupoBloqueiaTudo);
+  if (bloqueioGeral) {
     bad("seo_tecnico", "robots.blanket", "P0", "robots.txt bloqueia o site inteiro", "`Disallow: /` para `*` — o site não é rastreado por ninguém.");
   } else ok("seo_tecnico", "robots.blanket", "P0", "robots.txt não bloqueia o site");
   if (/sitemap:/i.test(site.robots)) ok("seo_tecnico", "robots.sitemap", "P2", "robots.txt anuncia o sitemap");
   else bad("seo_tecnico", "robots.sitemap", "P2", "robots.txt não anuncia o sitemap", "Adicione `Sitemap: https://.../sitemap.xml`.");
-  const missing = AI_BOTS.filter((b) => !new RegExp(`user-agent:\\s*${b}\\b`, "i").test(site.robots));
-  const blocked = AI_BOTS.filter((b) => {
-    const re = new RegExp(`user-agent:\\s*${b}\\b[\\s\\S]{0,120}?disallow:\\s*/\\s*$`, "im");
-    return re.test(site.robots);
-  });
-  if (blocked.length) bad("geo", "robots.ai", "P0", `robots.txt BLOQUEIA crawler de IA: ${blocked.join(", ")}`, "Bloquear o crawler é abrir mão de ser citado por aquela IA — decisão consciente, não default.");
+  const missing = AI_BOTS.filter((b) => !gruposDe(groups, b).length);
+  // Bloqueio explícito: o bot tem grupo PRÓPRIO e esse grupo fecha a raiz.
+  const bloqueadoDireto = AI_BOTS.filter((b) => gruposDe(groups, b).some(grupoBloqueiaTudo));
+  // Herdado: bot sem grupo próprio cai no `*` — se o `*` fecha tudo, ele também está fora.
+  const bloqueadoPeloAsterisco = bloqueioGeral ? missing : [];
+  const blocked = [...bloqueadoDireto, ...bloqueadoPeloAsterisco];
+  if (blocked.length) {
+    const comoFoi = bloqueadoDireto.length && bloqueadoPeloAsterisco.length
+      ? `Regra própria para ${bloqueadoDireto.join(", ")}; os demais herdam o \`Disallow: /\` do \`User-agent: *\`.`
+      : bloqueadoDireto.length
+        ? "Cada um tem regra própria com `Disallow: /` no seu bloco."
+        : "Nenhum tem regra própria — todos herdam o `Disallow: /` do `User-agent: *`.";
+    bad("geo", "robots.ai", "P0", `robots.txt BLOQUEIA crawler de IA: ${blocked.join(", ")}`, `${comoFoi} Bloquear o crawler é abrir mão de ser citado por aquela IA — decisão consciente, não default.`);
+  }
   else if (missing.length > 6) bad("geo", "robots.ai", "P2", `robots.txt não menciona ${missing.length} crawlers de IA`, `Sem regra explícita eles caem no \`*\` (permitido). Declarar Allow explícito para ${missing.slice(0, 5).join(", ")}… é sinal de intenção e evita bloqueio acidental futuro.`);
   else ok("geo", "robots.ai", "P1", "Crawlers de IA liberados explicitamente no robots.txt");
 }
@@ -756,9 +829,27 @@ function auditSitemap(site, crawled) {
   ok("seo_tecnico", "sitemap.exists", "P1", `sitemap.xml OK (${good.reduce((a, s) => a + (s.entries || 0), 0)} URLs)`);
   if (good.some((s) => s.lastmod)) ok("seo_tecnico", "sitemap.lastmod", "P2", "sitemap tem <lastmod>");
   else bad("seo_tecnico", "sitemap.lastmod", "P2", "sitemap sem <lastmod>", "Sem data o crawler não sabe o que mudou e re-rastreia por chute.");
-  const wrongHost = crawled.filter((p) => p.status >= 300).map((p) => p.url);
-  if (wrongHost.length) bad("seo_tecnico", "sitemap.status", "P1", `${wrongHost.length} URL(s) do sitemap não devolvem 200`, wrongHost.slice(0, 5).join(" · "));
-  else ok("seo_tecnico", "sitemap.status", "P1", "Todas as URLs auditadas devolvem 200");
+  // "Não consegui buscar" ≠ "respondeu 200". Página cujo fetch estourou (DNS,
+  // TLS, timeout) não tem `status` nenhum — o filtro antigo (`p.status >= 300`)
+  // dava `undefined >= 300` = false e ela entrava calada no balde dos OK. O
+  // relatório então afirmava "todas devolvem 200" sem ter medido essas.
+  // (cicatriz 2026-07-28 · canon: não medido nunca vira aprovado)
+  const medidas = crawled.filter((p) => typeof p.status === "number");
+  const naoMedidas = crawled.filter((p) => typeof p.status !== "number" && !p.file);
+  const forade200 = medidas.filter((p) => p.status !== 200).map((p) => `${p.url} → HTTP ${p.status}`);
+  if (forade200.length) {
+    bad("seo_tecnico", "sitemap.status", "P1", `${forade200.length} de ${medidas.length} URL(s) medidas não devolvem 200`, forade200.slice(0, 5).join(" · "));
+  } else if (!medidas.length) {
+    skip("seo_tecnico", "sitemap.status", "P1", "Nenhuma URL pôde ser buscada", `As ${naoMedidas.length} URL(s) da fila falharam no fetch (rede, TLS ou DNS) — o status HTTP delas não foi medido.`);
+  } else {
+    ok("seo_tecnico", "sitemap.status", "P1", `As ${medidas.length} URL(s) medidas devolvem 200`);
+  }
+  // O fetch que falhou é achado próprio — não some dentro do check de status.
+  if (naoMedidas.length) {
+    bad("seo_tecnico", "fetch.failed", "P1", `${naoMedidas.length} URL(s) não puderam ser buscadas`,
+      "Falha de rede, TLS ou DNS ao buscar. Estas páginas ficaram FORA da auditoria — nada foi verificado nelas. Se o TLS quebrou nesta máquina, rode de novo com `NODE_OPTIONS=--use-system-ca`.",
+      naoMedidas.slice(0, 5).map((p) => `${p.url} → ${p.error || "sem resposta"}`).join("\n"));
+  } else ok("seo_tecnico", "fetch.failed", "P1", "Todas as URLs da fila responderam");
 }
 
 function auditLlmsTxt(site, pages, ctx) {

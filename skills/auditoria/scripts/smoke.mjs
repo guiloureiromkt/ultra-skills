@@ -17,7 +17,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawnSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +56,9 @@ fs.writeFileSync(path.join(SITE, "boa.html"), `<!doctype html>
 <a href="/outra.html">Ver tabela completa de precos</a>
 <form action="/api/contato" method="post">
   <label for="e">Seu e-mail</label><input id="e" name="email" type="email">
+  <label for="itens[]">Comodos a reformar</label><input id="itens[]" name="itens[]" type="text">
+  <label for="orcamento (R$)">Orcamento previsto</label><input id="orcamento (R$)" name="orcamento" type="text">
+  <label for="prazo)">Prazo desejado</label><input id="prazo)" name="prazo" type="text">
   <input type="text" name="website" style="display:none">
   <button>Enviar</button>
 </form>
@@ -138,6 +141,61 @@ const limpo = res2.status === 0
   ? JSON.parse(fs.readFileSync(path.join(OUT2, "audit-report.json"), "utf8"))
   : null;
 
+// --- 3ª rodada: o que SÓ existe no modo --url ------------------------------
+// robots.txt e status HTTP não são exercitados por auditoria de pasta. Estes
+// dois já produziram achado errado em relatório entregue a cliente, então
+// aqui sobe um servidor de mentira e roda o auditor contra ele de verdade.
+const PORT = 34771 + (process.pid % 800);
+const ORIGIN = `http://127.0.0.1:${PORT}`;
+const PORTA_MORTA = 9; // discard — recusa conexão: força FALHA de fetch, não status
+
+// A armadilha: GPTBot está LIBERADO, mas o `Disallow: /` do SemrushBot vem
+// logo abaixo. A regex antiga atravessava a fronteira do bloco e acusava o
+// GPTBot de bloqueado — P0 falso. ClaudeBot, esse sim, está bloqueado.
+const ROBOTS_ARMADILHA = [
+  "User-agent: *", "Allow: /", "",
+  "User-agent: GPTBot", "Allow: /", "",
+  "User-agent: SemrushBot", "Disallow: /", "",
+  "User-agent: ClaudeBot", "Disallow: /", "",
+  `Sitemap: ${ORIGIN}/sitemap.xml`, "",
+].join("\n");
+
+const SITEMAP_VIVO = `<urlset>
+<url><loc>${ORIGIN}/boa.html</loc><lastmod>2026-07-20</lastmod></url>
+<url><loc>http://127.0.0.1:${PORTA_MORTA}/inalcancavel.html</loc></url>
+</urlset>`;
+
+const htmlBoa = fs.readFileSync(path.join(SITE, "boa.html"), "utf8");
+const rotas = {
+  "/robots.txt": ["text/plain", ROBOTS_ARMADILHA],
+  "/sitemap.xml": ["application/xml", SITEMAP_VIVO],
+  "/boa.html": ["text/html; charset=utf-8", htmlBoa],
+  "/llms.txt": ["text/plain", "# Marca Certa\n\n> Loja de material de construcao em Sao Paulo.\n\n## Servicos\n- [Entrega](/entrega): entrega em 24h.\n"],
+};
+const { createServer } = await import("node:http");
+const srv = createServer((req, res) => {
+  const rota = rotas[req.url.split("?")[0]];
+  if (!rota) { res.writeHead(404, { "content-type": "text/html" }); res.end("<h1>nao existe</h1>"); return; }
+  res.writeHead(200, { "content-type": rota[0] });
+  res.end(rota[1]);
+});
+await new Promise((r) => srv.listen(PORT, "127.0.0.1", r));
+
+const OUT3 = path.join(TMP, "out3");
+const res3 = await new Promise((resolve) => {
+  const c = spawn(process.execPath, [
+    path.join(HERE, "audit.mjs"), "--url", `${ORIGIN}/`,
+    "--brand", "Marca Certa", "--sector", "material de construcao", "--out", OUT3,
+  ], { encoding: "utf8" });
+  c.on("close", (code) => resolve(code));
+  c.on("error", () => resolve(-1));
+});
+srv.close();
+const vivo = res3 === 0 && fs.existsSync(path.join(OUT3, "audit-report.json"))
+  ? JSON.parse(fs.readFileSync(path.join(OUT3, "audit-report.json"), "utf8"))
+  : null;
+const acheVivo = (id) => (vivo?.findings || []).find((f) => f.id === id) || null;
+
 // ------------------------------------------------------------------ asserts -
 const casos = [
   // [descrição, condição verdadeira = passou]
@@ -165,8 +223,13 @@ const casos = [
     !(rel.pages.find((p) => /boa/.test(p.file || ""))?.issues || []).some((i) => /canonical/.test(i.msg))],
   ["NÃO acusa a página boa de faltar max-image-preview",
     !(rel.pages.find((p) => /boa/.test(p.file || ""))?.issues || []).some((i) => /max-image-preview/.test(i.msg))],
-  ["NÃO acusa a página boa de formulário sem rótulo",
+  // `id="itens[]"` e `id="orcamento (R$)"` são HTML válido e viravam RegExp
+  // inválida — a auditoria inteira morria no meio. Aqui eles têm <label for>
+  // certinho: se o auditor sobreviver E não acusar, a interpolação está segura.
+  ["NÃO acusa a página boa de formulário sem rótulo (inclusive id com [] e parêntese)",
     !(rel.pages.find((p) => /boa/.test(p.file || ""))?.issues || []).some((i) => /sem rótulo/.test(i.msg))],
+  ["mede os 4 campos visíveis do formulário sem quebrar no id exótico",
+    (rel.pages.find((p) => /boa/.test(p.file || ""))?.forms || []).some((f) => f.fields === 4 && f.unlabeled === 0)],
   // Honestidade: o que não dá pra medir localmente tem que sair como não medido.
   ["marca como 'não medido' o que auditoria local não vê",
     rel.findings.some((f) => f.status === "skip" && f.id === "feeds.alive")],
@@ -178,6 +241,21 @@ const casos = [
   ["site correto fica sem nenhum P0", limpo !== null && limpo.scores.p0Total === 0],
   ["nenhum eixo do site correto fica abaixo de 90",
     limpo !== null && Object.values(limpo.scores.per).every((v) => v.score === null || v.score >= 90)],
+
+  // --- modo --url: robots.txt e status HTTP ---------------------------------
+  ["a auditoria por URL roda até o fim", vivo !== null],
+  ["acusa o bot que ESTÁ bloqueado no próprio bloco (ClaudeBot)",
+    /ClaudeBot/.test(acheVivo("robots.ai")?.title || "")],
+  ["NÃO acusa bot liberado por causa do Disallow do bloco vizinho (GPTBot)",
+    vivo !== null && !/GPTBot/.test(acheVivo("robots.ai")?.title || "")],
+  ["não confunde bloqueio de um bot com bloqueio do site inteiro",
+    acheVivo("robots.blanket")?.status === "pass"],
+  ["separa 'falhou ao buscar' de 'respondeu com status ruim'",
+    acheVivo("fetch.failed")?.status === "fail"],
+  ["NÃO afirma que todas devolvem 200 quando alguma nem foi buscada",
+    vivo !== null && !/Todas as URLs/.test(acheVivo("sitemap.status")?.title || "")],
+  ["a URL que respondeu 200 continua contada como 200",
+    /1 URL\(s\) medidas devolvem 200/.test(acheVivo("sitemap.status")?.title || "")],
 ];
 
 let falhou = 0;

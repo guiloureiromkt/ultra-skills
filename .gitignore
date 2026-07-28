@@ -1,6 +1,9 @@
 # saída de auditoria (cada rodada gera; não versionar)
-audit/
-auditoria/
+# Ancorado na raiz DE PROPÓSITO: sem a barra inicial, `auditoria/` casava também
+# com `skills/auditoria/` e todo arquivo NOVO da skill entrava silenciosamente
+# no ignore — o arquivo existia no disco, sumia do git, e ninguém era avisado.
+/audit/
+/auditoria/
 **/audit-report.json
 **/AUDITORIA.md
 **/PROGRESSO.md

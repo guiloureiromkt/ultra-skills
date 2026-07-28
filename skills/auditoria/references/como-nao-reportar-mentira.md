@@ -4,7 +4,7 @@ Todo check deste arquivo é sobre **você**, não sobre o site. São armadilhas 
 
 Isso é pior que não achar o problema. Achado falso gasta o tempo de quem vai corrigir, e depois de dois deles a pessoa para de ler o relatório inteiro — inclusive os P0 verdadeiros.
 
-**As seis abaixo são erros reais, cometidos em campo, cada um a poucos segundos de virar um achado inventado num relatório entregue.**
+**As oito abaixo são erros reais, cometidos em campo, cada um a poucos segundos de virar um achado inventado num relatório entregue.**
 
 ---
 
@@ -68,7 +68,29 @@ Sitemap de cinco dias com 68 impressões não é site fraco — é índice novo.
 
 ---
 
-## A regra que resume as seis
+## B7 · `Disallow: /` pertence a um bloco, não ao arquivo
+
+**Se** o robots.txt tem um `Disallow: /` em algum lugar, **não conclua** que ele vale pro bot que você está checando.
+
+O robots.txt é lido em **grupos**: um ou mais `User-agent:` seguidos das regras que valem só pra eles, até o próximo grupo. Procurar o nome do bot e depois varrer os próximos caracteres atrás de um `Disallow: /` atravessa a fronteira do bloco — e a regra de um bot vira acusação contra o vizinho.
+
+Aconteceu: um `Disallow: /` de crawler de SEO, três linhas abaixo, fez o GPTBot (que estava explicitamente liberado) ser reportado como bloqueado. **P0 falso, em relatório entregue a cliente.** Na mesma varredura o arquivo ainda foi acusado de bloquear o site inteiro, pelo mesmo motivo.
+
+**Fatie por bloco e avalie cada um sozinho.** No `audit.mjs` isso é o `parseRobotsGroups()`. Bot sem bloco próprio herda o `*` — e isso se diz no achado, porque é uma causa diferente com uma correção diferente. `Allow: /` no mesmo grupo cancela o `Disallow: /`.
+
+---
+
+## B8 · Fetch que falhou não é página que respondeu 200
+
+**Se** a página não pôde ser buscada, **não conclua** nada sobre o status dela.
+
+DNS que não resolve, TLS que quebra, timeout: nesses casos não existe status HTTP nenhum. Um filtro do tipo "status ≥ 300 é problema" trata a ausência de status como se fosse 200 — e o relatório sai afirmando "todas as páginas devolvem 200" tendo medido só uma parte delas. É a pior classe de mentira do relatório: a que soa como aprovação.
+
+**Separe os três estados: respondeu 200 · respondeu outro status · não foi medido.** O terceiro é achado próprio (`fetch.failed`), e o texto do check só fala das páginas que realmente foram medidas. Nesta máquina, falha de TLS em massa costuma ser o antivírus — rode de novo com `NODE_OPTIONS=--use-system-ca` antes de culpar o site (`CLAUDE.md §10.1`).
+
+---
+
+## A regra que resume as oito
 
 Toda conclusão precisa passar por: **eu medi isso, ou eu deduzi isso?**
 
