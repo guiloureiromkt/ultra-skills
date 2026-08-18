@@ -216,7 +216,23 @@ If images were provided, the slide outline already incorporates them from Step 1
 
 For decks that deserve illustration, generate **text-free visual metaphors** per slide with `scripts/gen_slide_image.py` (inherited from the killer-decks method: **the image exemplifies, the HTML writes** — crisp text always comes from code, never baked into the image).
 
-- **Requires** the `REPLICATE_API_TOKEN` environment variable (or a local `.env`). No token → skip silently and stay on the CSS-visuals path; never block a deck on this.
+- **Requires** the `REPLICATE_API_TOKEN` environment variable (or a local `.env`). No token → offer the beginner setup below ONCE; if the user declines, stay on the CSS-visuals path; never block a deck on this.
+
+#### Ativar o Replicate — passo a passo pra quem nunca fez isso
+
+> **Instrução pra IA:** se o usuário quiser ilustrações e o token não existir, guie este caminho com ele, um passo por vez, em linguagem leiga. Nunca peça que ele cole o token no chat — token é senha.
+
+O Replicate (replicate.com) é um serviço que roda modelos de imagem por uso: você só paga o que gerar — na casa de **US$ 0,04 por imagem** no modelo padrão (flux-1.1-pro) e ~US$ 0,15 no `nano` (nano-banana-pro). Um deck com 10 ilustrações custa menos de meio dólar. Pra ativar:
+
+1. **Criar a conta:** entre em **replicate.com** e clique em *Sign in* — dá pra entrar com a conta do GitHub ou com e-mail. É grátis criar.
+2. **Cadastrar o pagamento:** em **replicate.com/account/billing**, adicione um cartão. Sem susto: não é assinatura — é pré-pago/por uso, e dá pra definir um limite mensal de gasto nessa mesma tela (sugestão: US$ 5 pra começar).
+3. **Gerar a chave (o "token"):** em **replicate.com/account/api-tokens**, clique em *Create token*, dê um nome (ex.: "decks") e copie o código que aparece (começa com `r8_`). **Essa chave é uma senha:** quem tem ela gera imagens na sua conta. Não cole em chat, print ou grupo.
+4. **Guardar a chave onde a skill lê:** na pasta do seu projeto, crie um arquivo chamado **`.env`** (só isso, com o ponto) contendo uma única linha:
+   ```
+   REPLICATE_API_TOKEN=r8_sua_chave_aqui
+   ```
+   A IA pode criar o arquivo pra você — você só cola a chave dentro dele no seu editor, não no chat. (Alternativa de quem já usa terminal: exportar `REPLICATE_API_TOKEN` no perfil do shell.) Se o projeto usa git, confira que `.env` está no `.gitignore` — chave não sobe pra repositório.
+5. **Testar antes do deck inteiro:** gere UMA imagem de teste e confira se apareceu na pasta e se o painel do Replicate registrou a cobrança de centavos. Chave vazou? Revogue em *api-tokens* e gere outra — leva 30 segundos.
 - Write a `spec.json` mapping slide ids to prompts, then run: `python scripts/gen_slide_image.py spec.json <out_dir> [flux-pro|nano]`. Default `flux-pro` (~US$0.04/image) fits most decks; `nano` accepts `refs` for chained visual continuity. **Tell the user the approximate cost before running.**
 - Art direction rules: derive every prompt from the deck's chosen palette and mood (name the hex values and the vibe in the prompt); keep one repeated aesthetic signature across all prompts so the deck reads as one system; the script appends the no-text suffix automatically.
 - **Look at every generated image before using it** (read the file) — check palette match, no accidental text, no broken anatomy. Regenerate the misses. Reference images from slides via relative paths (`assets/…`), never base64 in the HTML.
