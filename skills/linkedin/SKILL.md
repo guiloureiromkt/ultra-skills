@@ -348,21 +348,23 @@ Antes de escrever qualquer peça, a IA pergunta, em sequência:
 
 ## 2.4 · O algoritmo do LinkedIn (o sistema de ranqueamento, chamado 360Brew) explicado simples
 
+> **Atualização 2026:** o LinkedIn fez uma virada de distribuição (a "atualização de autenticidade", início de 2026) que os analistas resumem como **profundidade e autoridade no lugar de viral**. Tradução prática: o feed parou de premiar o post que explode e passou a premiar quem é lido com atenção, sobre os mesmos temas, semana após semana. Seus 4 pilares (seção da Entrevista inicial) deixaram de ser organização — viraram o próprio jogo.
+
 Plataformas como o LinkedIn não medem mais "curtidas". Elas medem **sinais de valor real**. Três coisas importam mais que tudo:
 
-**a) Salvar vale MUITO mais que curtir.** Quando alguém salva seu post pra consultar depois, o algoritmo entende "isso é útil" e mostra pra mais gente. Hierarquia aproximada de peso:
+**a) Salvar, enviar e comentar valem MUITO mais que curtir.** Quando alguém salva seu post pra consultar depois ou manda pra um colega no privado, o algoritmo entende "isso é útil" e mostra pra mais gente. Hierarquia de peso (dados de análises de 2026):
 
 | Sinal | Peso relativo |
 |---|---|
-| Salvar (alguém guarda pra depois) | **4-6×** |
-| Compartilhar no privado (manda pra um colega por mensagem) | 3× |
-| Comentário longo (>15 palavras) | 2× |
-| Comentário curto | 1× |
-| Curtida | 0.3× |
+| Salvar (alguém guarda pra depois) | **topo absoluto** |
+| Compartilhar no privado (manda pra um colega por mensagem) | logo abaixo |
+| Comentário de verdade (>15 palavras) | **~15× o peso de uma curtida** |
+| Comentário curto ("top!", "concordo") | pouco |
+| Curtida | quase nada |
 
-→ **Implicação prática:** projete a peça pra ser SALVA, não curtida. Inclua sempre 1 coisa que valha salvar — um dado, uma lista, um passo a passo, um critério de decisão.
+→ **Implicação prática:** projete a peça pra ser SALVA e COMENTADA, não curtida. Inclua sempre 1 coisa que valha salvar — um dado, uma lista, um passo a passo, um critério de decisão — e feche com algo que provoque comentário de frase inteira, não "concordo".
 
-**b) Tempo que a pessoa fica lendo.** O algoritmo nota se o leitor PAROU pra ler (31-60 segundos) ou passou direto. Densidade de informação por linha segura o leitor. Texto raso = dedo passando reto.
+**b) Tempo que a pessoa fica lendo (o fator nº 1 de 2026).** O algoritmo mede se o leitor PAROU pra ler ou passou direto — e a diferença é brutal: análises de 2026 apontam que posts que seguram o leitor por **61+ segundos** engajam ~13× mais que os que perdem a pessoa nos 3 primeiros. Densidade de informação por linha segura o leitor. Texto raso = dedo passando reto.
 
 **c) Janela de ouro (primeiros 60-90 min).** O alcance da peça é decidido pelo desempenho na primeira hora e meia. Então:
 - Publique no horário em que SUA audiência está online (testes apontam 7-9h, 12-13h ou 18-20h em dias úteis — você descobre o seu).
@@ -374,7 +376,7 @@ Plataformas como o LinkedIn não medem mais "curtidas". Elas medem **sinais de v
 2. **Segura a leitura?** Faz parar 31-60s? Cheque a densidade.
 3. **Vale encaminhar?** Alguém mandaria isso pra um colega? Cheque a especificidade do seu ponto de vista.
 
-**Link no corpo do post:** o LinkedIn penaliza link no corpo (-25 a -40% de alcance). Coloque o link **no 1º comentário** (você mesmo, logo após publicar) e avise no corpo: *"Link no 1º comentário pra quem quiser ir fundo."*
+**Link no corpo do post:** a penalidade PIOROU — medições de 2026 apontam **~60% menos alcance** pra post com link externo no corpo (o sistema detecta inclusive o "clicou e voltou rápido" e rebaixa ainda mais). Coloque o link **no 1º comentário** (você mesmo, logo após publicar) e avise no corpo: *"Link no 1º comentário pra quem quiser ir fundo."* As duas exceções sem penalidade: **newsletter nativa** (link à vontade dentro dela) e **artigo nativo**.
 
 ## 2.5 · Anti-IA Kill List (a lista do proibido — descarte e reescreva)
 
@@ -430,7 +432,7 @@ Este é um **esqueleto sugerido**, não uma regra. Substitua os pilares pelos NO
 
 > **Funil** = o caminho do leitor até virar cliente: **Topo** atrai quem ainda não te conhece · **Meio** aprofunda a relação · **Base** vende.
 
-**Mix de formatos no mês (diversidade importa — cada formato tem peso próprio):** PDF nativo "Document" (~4×/mês, costuma ser o de maior engajamento) · vídeo curto (2-3×) · multi-imagem (4×) · newsletter (2×, quinzenal) · artigo permanente (1×) · texto manifesto (4×) · texto médio (~6×) · enquete (2-3×, multiplica alcance).
+**Mix de formatos no mês (diversidade importa — cada formato tem peso próprio):** PDF nativo "Document" (~4×/mês, costuma ser o de maior engajamento) · vídeo curto (**4×+ em 2026 — é o formato que o feed mais empurra pra descoberta**) · multi-imagem (4×) · newsletter (2×, quinzenal) · artigo permanente (1×) · texto manifesto (4×) · texto médio (~6×) · enquete (2-3×, multiplica alcance).
 
 **Funil mensal sugerido (70-20-10):** 70% educacional · 20% pessoal · 10% promocional.
 
@@ -450,11 +452,19 @@ Este é um **esqueleto sugerido**, não uma regra. Substitua os pilares pelos NO
 
 ## 2.10 · Newsletter LinkedIn nativa
 
-Newsletters nativas do LinkedIn: NÃO são penalizadas por link no corpo · têm alcance 5-10× maior que post normal · notificam toda a audiência inscrita · e são lidas pelas IAs (ChatGPT e afins — bom pra você ser citado por elas). Estrutura vencedora (1.800-2.100 palavras): gancho (1 parágrafo) → tese (1 frase que estrutura tudo) → 3-5 sub-seções com subtítulo (200-300 palavras cada) → conclusão sintética → CTA específico.
+Newsletters nativas do LinkedIn: NÃO são penalizadas por link no corpo · têm alcance 5-10× maior que post normal · notificam a audiência inscrita **por notificação E por e-mail a cada edição** · são **indexadas pelo Google** (edição rankeia e traz gente meses depois — coisa que post de feed nunca faz) · e são lidas pelas IAs (ChatGPT e afins — bom pra você ser citado por elas).
 
-## 2.11 · Vídeo nativo (essencial)
+O que mudou em 2026: o requisito caiu pra **150 seguidores/conexões** — praticamente todo mundo pode criar. Quando você publica a **1ª edição**, o LinkedIn convida sua rede inteira por notificação; e **todo seguidor novo passa a ser convidado automaticamente** — a newsletter vira um ativo que cresce sozinho. Cadência que funciona: **semanal ou quinzenal** (mensal perde tração; diária cansa e gera descadastro). Melhor janela de publicação: **terça a quinta, 9h-11h** do fuso da sua audiência.
 
-Primeiros 3 segundos decidem: rosto já no primeiro quadro (não logo de empresa, não slide branco) · fala começa com palavra-chave forte (não "olá, tudo bem?") · legenda visível de imediato. Duração ideal: sacada rápida 30-45s · análise de caso 60-90s · história pessoal 90-120s · tutorial 2-3min máx. Vertical (formato 9:16) pra quem assiste no celular (80% dos casos).
+Estrutura vencedora (1.800-2.100 palavras): gancho (1 parágrafo) → tese (1 frase que estrutura tudo) → 3-5 sub-seções com subtítulo (200-300 palavras cada) → conclusão sintética → CTA específico. Capa da edição: **1920×1080** (imagem relacionada ao tema — rosto/pessoa real rende mais que banco de imagem genérico; sempre com texto-alternativo). Logo da newsletter: **300×300**.
+
+> **Quer ir fundo?** A skill-irmã **`ultra:newsletter`** é um motor só de newsletter: fundação (nome, promessa, cadência), produção de cada edição e crescimento. Se você recebeu este arquivo avulso, peça a quem te enviou.
+
+## 2.11 · Vídeo nativo (essencial — e em 2026, o formato que o feed mais empurra)
+
+Dados de 2026: vídeo nativo gera **até 2× o engajamento** de post só-texto, e o LinkedIn prioriza **upload nativo** (subir o arquivo) sobre link de YouTube — link de vídeo externo é tratado como link externo, com a penalidade de sempre.
+
+Primeiros 3 segundos decidem: rosto já no primeiro quadro (não logo de empresa, não slide branco) · fala começa com palavra-chave forte (não "olá, tudo bem?") · legenda visível de imediato. Duração por objetivo (calibragem 2026): **30-90s pra ser descoberto** por quem não te conhece · **2-5min pra aprofundar** com quem já te segue. Dentro da faixa curta: sacada rápida 30-45s · análise de caso 60-90s · história pessoal 90-120s. Vertical (formato 9:16) pra quem assiste no celular (80% dos casos).
 
 ---
 
@@ -604,4 +614,4 @@ A cada 20-30 peças publicadas, peça uma recalibração. A IA checa: padrões d
 
 ---
 
-*LinkedIn Evolution · Edição Gratuita · motor de conteúdo feito por Gui Loureiro · curado por IA. Versão grátis e generalizada — a calibração de voz é toda SUA (gerada na Entrevista inicial). Veio da newsletter **Seguindo a Manada**, do Gui Loureiro.*
+*LinkedIn Evolution · Edição Gratuita · **v2 — atualizada em agosto/2026** (virada "profundidade e autoridade" do algoritmo, pesos de engajamento e dwell time revistos, penalidade de link recalibrada, newsletter nativa com requisito de 150 seguidores e crescimento automático). Motor de conteúdo feito por Gui Loureiro · curado por IA. Versão grátis e generalizada — a calibração de voz é toda SUA (gerada na Entrevista inicial). Veio da newsletter **Seguindo a Manada**, do Gui Loureiro.*

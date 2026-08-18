@@ -380,6 +380,37 @@ Algumas IAs trocam aspas retas (") por aspas curvas (" ") sem você pedir.
 
 ---
 
+## Bloco F · Condicional (só para documento que outra pessoa vai ler pra agir)
+
+### 25. O documento escrito pra quem já sabe
+
+> ⚠️ **Padrão condicional.** Só vale quando o texto é um **documento de trabalho que outra pessoa vai ler pra tomar decisão ou executar**: briefing, dossiê, relatório, proposta, handoff, documentação, ata, plano. **Não vale** pra post, legenda, e-mail curto, anúncio, roteiro — nesses, contexto demais atrapalha.
+
+A IA escreve com o contexto inteiro carregado na memória dela e **não sente a falta que ele faz**. Ela sabe o que é a sigla, quem é a pessoa citada, por que aquele projeto existe — então não explica. O resultado é um texto correto que só funciona pra quem já estava na conversa. Quem chega depois lê e não entende o que está olhando.
+
+Isso é sinal de máquina por um motivo simples: **humano que escreve pra colega situa por instinto.** A gente começa com "lembra daquele cliente que…", "isso aqui nasceu porque…". A ausência total desse gesto é tão denunciadora quanto travessão demais — e, diferente dos outros vícios, esse **quebra o documento na prática**, não só no estilo.
+
+**Sinais:**
+- Sigla ou jargão usado sem explicação na primeira aparição ("NR-1", "CRO", "RDC", "EBITDA", "ICP")
+- O texto **abre pela conclusão ou pela decisão**, sem antes dizer do que se trata
+- Nome de pessoa, empresa ou projeto citado como se todo mundo soubesse quem é
+- Tabela densa sem uma frase antes explicando o que ela mostra e por que importa
+- Link ou referência interna (`[[wikilink]]`, nome de arquivo, código) sem dizer o que tem lá dentro
+- Nenhuma frase em lugar nenhum responde: **"por que eu deveria me importar com isso?"**
+
+**O teste que resolve — o colega novo:** *alguém que entrou na empresa esta semana consegue ler isso e entender o assunto, o porquê e o que fazer?* Se a resposta for não, o documento não está pronto, por mais correto que esteja.
+
+**Como consertar:**
+1. **Abra situando, não decidindo.** Os primeiros dois parágrafos explicam o assunto em linguagem comum — o que é esse mercado, quem compra de quem, por que ele existe. A decisão vem depois.
+2. **Explique toda sigla na primeira vez**, dentro da frase, sem mandar pro glossário: "a NR-1 (a norma que obriga empresa a mapear risco psicológico no trabalho)".
+3. **Toda tabela ganha uma frase antes** dizendo o que ela mostra e o que o leitor deve concluir dela.
+4. **Diga por que importa, não só o que é.** "A empresa captou R$12 milhões" vira "A empresa captou R$12 milhões — a primeira vez em 25 anos, o que significa que agora existe verba onde antes não existia".
+5. **Glossário no fim** quando houver mais de 5 termos técnicos.
+
+**Erro oposto, também vale marcar:** explicar o óbvio pra quem é da área. Situar não é infantilizar — é dar o mínimo pra pessoa entrar. Se o documento é pra três especialistas do mesmo assunto, a dose cai.
+
+---
+
 # PERSONALIDADE E ALMA (texto limpo ≠ texto vivo)
 
 Remover os 24 padrões é metade do trabalho. Texto tecnicamente limpo mas sem voz é tão óbvio quanto texto cheio de vício. Bom texto tem um humano por trás.
