@@ -50,6 +50,7 @@ fs.writeFileSync(path.join(SITE, "boa.html"), `<!doctype html>
 <h2>Vale a pena mudar a hidraulica de lugar?</h2>
 <p>Mudar o ponto de agua acrescenta de 20% a 30% ao orcamento, porque envolve quebrar contrapiso, refazer impermeabilizacao e esperar a cura antes de assentar o revestimento. O custo direto do encanamento e baixo; o que pesa e o tempo de obra parada e o retrabalho de acabamento em volta.</p>
 <p>Na pratica, so compensa quando a cozinha atual tem um problema de circulacao real, do tipo geladeira que nao abre por causa da bancada. Se o incomodo e so estetico, a mesma verba aplicada em bancada e iluminacao muda mais a percepcao do ambiente do que mover a pia meio metro.</p>
+<p>O metodo: comprar tudo antes e medir a marcenaria por ultimo. Esta frase esta no teste de proposito: a palavra antes dos dois pontos termina nas mesmas quatro letras do marcador de rascunho em ingles, e isso ja fez o auditor acusar rascunho onde nao havia.</p>
 <h2>Quanto tempo demora uma reforma de cozinha?</h2>
 <p>De 3 a 5 semanas quando a hidraulica fica onde esta, e de 6 a 10 semanas quando ela muda. O prazo estoura quase sempre por dois motivos: material comprado depois que a obra comecou, e marcenaria medida antes do revestimento assentado. Comprar tudo antes e medir a marcenaria por ultimo resolve a maior parte dos atrasos.</p>
 <img src="/capa.png" alt="Cozinha reformada com bancada de granito" width="1200" height="630">
@@ -121,6 +122,8 @@ if (res.status !== 0) {
 const rel = JSON.parse(fs.readFileSync(path.join(OUT, "audit-report.json"), "utf8"));
 const falhas = new Set(rel.findings.filter((f) => f.status === "fail").map((f) => f.id));
 const msgs = rel.pages.flatMap((p) => (p.issues || []).map((i) => i.msg)).join("\n");
+// mensagens SÓ da página correta: serve pras asserções de "não acusa o que está certo"
+const boaMsgs = rel.pages.filter((p) => /boa\.html$/.test(p.url || "")).flatMap((p) => (p.issues || []).map((i) => i.msg)).join("\n");
 
 // --- 2ª rodada: um site CORRETO tem que ATINGIR o gate ----------------------
 // Esta é a propriedade mais importante do loop de correção: se o gate for
@@ -210,6 +213,7 @@ const casos = [
   ["acusa duas metas robots", /metas <meta name="robots">/.test(msgs)],
   ["acusa JSON-LD inválido", /JSON-LD inválido/.test(msgs)],
   ["acusa placeholder publicado", /Placeholder\/lorem/.test(msgs)],
+  ["NAO acusa placeholder em palavra portuguesa (metodo: termina em todo:)", !/Placeholder\/lorem/.test(boaMsgs)],
   ["acusa o site se descrevendo como outra marca", /se DESCREVE com termos de outra marca/.test(msgs)],
   ["acusa VideoObject sem vídeo assistível", /VideoObject` numa página sem vídeo/.test(msgs)],
   ["acusa imagem sem alt", /sem atributo alt/.test(msgs)],

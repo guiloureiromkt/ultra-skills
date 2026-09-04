@@ -461,8 +461,11 @@ function auditPage(pageUrl, html, headers, ctx) {
   // formulário) e com run de 6+ x — máscara de CNPJ/CPF chega a 4-5 e não é
   // texto por preencher. Achado falso aqui vale menos que achado nenhum: ele
   // treina a pessoa a ignorar o relatório.
-  const PLACE = /(lorem ipsum|texto de exemplo|coloque aqui|seu texto aqui|inserir texto|TODO:|FIXME|\bx{6,}\b)/i;
-  const ph = text.match(PLACE);
+  // marcador de rascunho: TODO:/FIXME só em CAIXA ALTA e não colados a letra.
+  // "método:" termina em "todo:" e o \b nao ajuda, porque "e" acentuado nao e caractere de palavra.
+  const PLACE = /(lorem ipsum|texto de exemplo|coloque aqui|seu texto aqui|inserir texto|\bx{6,}\b)/i;
+  const PLACE_MARK = /(?:^|[^A-Za-zÀ-ÿ])(TODO:|FIXME\b)/;
+  const ph = text.match(PLACE) || text.match(PLACE_MARK);
   if (ph) add("P0", "Placeholder/lorem visível na página publicada", ph[0]);
 
   // seção com título e zero conteúdo (o "Cases" vazio do caso real)
