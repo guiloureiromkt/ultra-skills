@@ -55,6 +55,15 @@ Erro clássico e fácil de achar: o site serve em `www.dominio.com` mas o schema
 
 ---
 
+## Verificação com dado real (opcional)
+
+Tudo acima é **inferência**: sinais on-page que correlacionam com chance de citação, mas ninguém aqui testou se a IA cita o site *hoje*. Quando há acesso a uma ferramenta que testa prompts reais contra ChatGPT/Perplexity/Gemini/AI Overviews (um motor de share-of-voice/share-of-model, ou um MCP de SERP), ela vira a régua de verdade — o inferido só serve pra explicar o resultado real, nunca pra substituí-lo.
+
+Regras de honestidade pra quem tiver essa ferramenta (mesmo padrão de `como-nao-reportar-mentira.md`, aplicado a medição):
+- **Motor que falhou é "não medido"**, nunca "não aparece". Um erro de credencial ou timeout não é a marca perdendo citação — é a ferramenta não ter respondido. Confundir os dois é o pior tipo de achado falso, porque prescreve tratamento pro problema errado.
+- **Sem base de comparação, não existe share-of-voice.** Se nem a marca nem os concorrentes apareceram numa amostra pequena, o resultado é "indefinido", não "zero" — 0 citações em 5 consultas não prova ausência, só ausência *observada*.
+- **Reportar o tamanho da amostra e a confiança junto com o número.** "0/30 respostas" é informação; "não aparece" sem o denominador não é.
+
 ## O que **só** o humano ou o modelo julga (não automatize isto)
 
 O script mede forma. Estes cinco exigem leitura:

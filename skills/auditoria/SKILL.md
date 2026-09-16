@@ -171,4 +171,5 @@ Se o molde de origem tinha um defeito que vai se repetir em todo site nascido de
 
 - **`ultra:site`** constrói; esta audita. Todo site que sai da ultra-site passa aqui antes de virar entrega (a ultra-site aponta pra cá na Fase 8).
 - Se estiverem instaladas, `seo-geo`, `seo-audit` e `web-quality-audit` complementam com ângulos extras (Lighthouse, keyword research). **Esta skill não depende delas** — ela é auto-contida de propósito, porque vai pra mão de mentorado que pode não ter esse arsenal.
+- Se houver acesso a uma ferramenta de **medição real de citação em IA** (um motor tipo Radar de Citação/Share of Model, ou um MCP de SERP tipo DataForSEO), ela testa se a IA **de fato** cita o site hoje — dado de verdade, não inferência. Complementa a Fase 2 (ver `references/regua-geo.md#verificação-com-dado-real`), **não substitui**: a régua continua valendo sozinha pra quem não tem esse acesso.
 - Auditoria de **uma página só** de conteúdo → `seo-page`. **Plano de keywords do zero** → `seo-plan`. **Problema é visual, não de ranking** → `impeccable` / `hallmark`.
