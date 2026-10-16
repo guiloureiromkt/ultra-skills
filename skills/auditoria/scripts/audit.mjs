@@ -14,11 +14,11 @@
 // Uso:
 //   node audit.mjs --url https://www.exemplo.com --brand "Exemplo Ltda" \
 //        --sector "escritório de advocacia" --out ./audit [--max 30] \
-//        [--forbid "termo1,termo2"] [--repo C:/Repos/meu-site]
+//        [--forbid "termo1,termo2"] [--repo ./caminho/do/repo]
 //   node audit.mjs --dir ./site/dist --base https://exemplo.com --brand "..." --out ./audit
 //
-// Cicatriz de ambiente (Windows do Gui): o AVG faz MITM do TLS. Se der
-// UNABLE_TO_VERIFY_LEAF_SIGNATURE / self-signed, rode com:
+// TLS: antivírus e proxy corporativo interceptam HTTPS e o Node recusa o
+// certificado (UNABLE_TO_VERIFY_LEAF_SIGNATURE / self-signed). Nesse caso:
 //   NODE_OPTIONS=--use-system-ca node audit.mjs ...
 // ============================================================================
 
@@ -60,6 +60,7 @@ ultra-auditoria · audit.mjs
   --repo  <caminho>       repositório do site, pra varredura de código
   --max   <n>             máximo de páginas (default 30)
   --out   <caminho>       pasta de saída (default ./audit)
+  --round <n>             número da rodada (vai no relatório; o progresso.mjs compara)
 
 Exemplo:
   node audit.mjs --url https://www.exemplo.com --brand "Exemplo" --out ./audit
@@ -115,7 +116,7 @@ function tlsHint(err) {
   const m = String(err && err.message || err);
   if (!TLS_HINT_SHOWN && /self-signed|UNABLE_TO_VERIFY|certificate/i.test(m)) {
     TLS_HINT_SHOWN = true;
-    console.error("\n⚠️  TLS falhou. Nesta máquina o antivírus faz MITM. Rode de novo com:\n    NODE_OPTIONS=--use-system-ca node audit.mjs ...\n");
+    console.error("\n⚠️  TLS falhou. Antivírus ou proxy interceptando HTTPS? Rode de novo com:\n    NODE_OPTIONS=--use-system-ca node audit.mjs ...\n");
   }
 }
 
@@ -337,14 +338,24 @@ function auditPage(pageUrl, html, headers, ctx) {
   const robotsMeta = attr((metaBy("name", "robots") || {}).attrs || "", "content") || "";
   p.robotsMeta = robotsMeta;
   if (/noindex/i.test(robotsMeta)) add("P0", "Página com noindex — invisível pro Google", robotsMeta);
+  // nosnippet / max-snippet:0 tiram a página dos AI Overviews e do AI Mode (o Google diz
+  // isso na doc de robots meta desde 2025) e rebaixam a citação no Bing/Copilot.
+  const robotsTudo = metas.filter((m) => (attr(m.attrs, "name") || "").toLowerCase() === "robots").map((m) => attr(m.attrs, "content") || "").join(" ");
+  if (!/noindex/i.test(robotsTudo) && (/\bnosnippet\b/i.test(robotsTudo) || /max-snippet\s*:\s*0\b/i.test(robotsTudo))) {
+    add("P1", "Página com nosnippet / max-snippet:0 — o Google não usa o texto nos AI Overviews nem no AI Mode, e o Bing rebaixa a citação. Se a intenção é ser citada, remova", robotsTudo);
+  }
+  // meta robots fora do <head>: o Google avisa que pode ignorar.
+  const robotsNoBody = voidTags(H, "meta").filter((m) => (attr(m.attrs, "name") || "").toLowerCase() === "robots").length
+    - metas.filter((m) => (attr(m.attrs, "name") || "").toLowerCase() === "robots").length;
+  if (robotsNoBody > 0) add("P2", `<meta name="robots"> fora do <head> (${robotsNoBody}×) — o Google pode ignorar a diretiva`);
 
   // DESCOBERTA · preview grande (gate do card de imagem no Google e da elegibilidade ao Discover).
-  // Cicatriz 2026-07-25 (guiloureiro.com.br): faltava nas 129 páginas -> Discover com ZERO
-  // impressão em 90 dias, com schema/autor/imagem 1344px já corretos. É 1 linha no <head>.
+  // Caso real: um site de 129 páginas sem essa linha ficou com Discover em ZERO por 90 dias,
+  // com schema, autor e imagem 1344px já corretos. É 1 linha no <head>.
   const todasRobots = metas.filter((m) => (attr(m.attrs, "name") || "").toLowerCase() === "robots");
   if (!/noindex/i.test(robotsMeta)) {
     if (!/max-image-preview\s*:\s*large/i.test(robotsMeta)) {
-      add("P1", "sem 'max-image-preview:large' — o Google não serve card de imagem grande e a página fica inelegível ao Google Discover", robotsMeta || "(nenhuma meta robots)");
+      add("P1", "sem 'max-image-preview:large' — o Google não serve card de imagem grande, e na prática a página quase não aparece no Discover", robotsMeta || "(nenhuma meta robots)");
     }
     if (!/max-snippet\s*:\s*-1/i.test(robotsMeta)) {
       add("P2", "sem 'max-snippet:-1' — snippet limitado no resultado (perde espaço de SERP e CTR)", robotsMeta || "(nenhuma meta robots)");
@@ -439,7 +450,7 @@ function auditPage(pageUrl, html, headers, ctx) {
     const tnorm = norm(text);
     const missing = qs.filter((q) => !tnorm.includes(norm(q).slice(0, 40)));
     p.faq = { questions: qs.length, missingFromPage: missing.length };
-    if (missing.length) add("P0", `FAQPage declara ${missing.length} pergunta(s) que não existem no texto visível — divergência schema×página é sinal negativo pro Google`, missing.slice(0, 2).join(" | "));
+    if (missing.length) add("P1", `FAQPage declara ${missing.length} pergunta(s) que não existem no texto visível — o rich result de FAQ acabou em 2026, então o schema só serve se for coerente; schema que diz o que a página não diz é tratado como spam`, missing.slice(0, 2).join(" | "));
   }
 
   // entidade: Organization genérico onde cabia tipo específico
@@ -453,7 +464,7 @@ function auditPage(pageUrl, html, headers, ctx) {
     if (!specific) add("P1", "Só `Organization` genérico no schema — um tipo específico (LegalService, Dentist, SoftwareApplication, LocalBusiness…) diz pra IA o que você FAZ, não só que existe");
   }
 
-  // em-dash no texto visível (regra de copy do Gui)
+  // em-dash no texto visível (marcador de texto de IA)
   const emdash = (text.match(/—/g) || []).length;
   if (emdash) p.emdash = emdash;
 
@@ -575,6 +586,14 @@ function auditPage(pageUrl, html, headers, ctx) {
     .map((s) => { try { return new URL(s, pageUrl).toString(); } catch { return null; } })
     .filter(Boolean);
 
+  // Consent Mode só vale se o `consent default` vem ANTES da tag carregar; medir a ordem, não só a presença.
+  {
+    const iConsent = H.search(/gtag\(\s*['"]consent['"]\s*,\s*['"]default['"]/);
+    const iTag = H.search(/googletagmanager\.com\/(gtag\/js|gtm\.js)|gtag\(\s*['"]config['"]|connect\.facebook\.net|clarity\.ms\/tag|static\.hotjar\.com/);
+    const cmp = /consentmanager|cookieyes|cookiebot|onetrust|iubenda|axeptio|complianz/i.test(H);
+    p.consentDefault = cmp || (iConsent >= 0 && (iTag < 0 || iConsent < iTag));
+  }
+  p.whatsappTracked = /whatsapp_click|whatsapp['"]\s*[,:]|dataLayer\.push\([^)]*whatsapp/i.test(H);
   p.analytics = [];
   for (const a of ANALYTICS) {
     a.re.lastIndex = 0;
@@ -641,6 +660,8 @@ function auditPage(pageUrl, html, headers, ctx) {
     if (form.unlabeled) add("P1", `Formulário com ${form.unlabeled} campo(s) sem rótulo acessível — quem usa leitor de tela não sabe o que preencher`);
     if (form.unnamed) add("P2", `Formulário com ${form.unnamed} campo(s) sem \`name\` — o valor não é enviado nem chega no destino`);
     if (!form.honeypot && form.hasEmail) add("P2", "Formulário sem campo-armadilha anti-robô (honeypot) — tende a encher de spam");
+    const semAutocomplete = inputs.filter((i) => /(name|type)=["'](email|tel|phone|telefone|nome|name|cep|postal)["']/i.test(i.attrs) && !attr(i.attrs, "autocomplete")).length;
+    if (semAutocomplete) add("P2", `Formulário com ${semAutocomplete} campo(s) de identidade sem autocomplete — o navegador não preenche sozinho (WCAG 1.3.5) e cada campo digitado no celular custa conversão`);
   }
 
   // ---- blog: só cobra o que existe ------------------------------------------
@@ -655,10 +676,47 @@ function auditPage(pageUrl, html, headers, ctx) {
     if (!artNode) add("P1", "Post de blog sem schema Article/BlogPosting — o buscador não sabe que isso é um artigo, com autor e data");
     else {
       if (!artNode.datePublished) add("P1", "Post sem data de publicação no schema — frescor é critério de citação, principalmente no Perplexity");
-      if (!artNode.dateModified) add("P2", "Post sem data de atualização (dateModified) no schema");
+      if (!artNode.dateModified) add("P2", "Post sem data de atualização (dateModified) no schema — a IA prefere conteúdo mantido: a maioria das páginas citadas foi atualizada no último ano");
       if (!artNode.author) add("P1", "Post sem autor no schema — sem assinatura o conteúdo perde o sinal de experiência (E-E-A-T)");
+      else {
+        const au = Array.isArray(artNode.author) ? artNode.author[0] : artNode.author;
+        if (au && typeof au === "object" && !au.url && !au.sameAs) add("P2", "Autor sem página própria (author.url) — o Google lê 'quem escreveu' pela URL do autor; byline sem link não consolida a autoria");
+      }
     }
     if (!/\b(20\d{2})\b/.test(text.slice(0, 1200))) add("P2", "Data de publicação não aparece visível no topo do post — o leitor (e a IA) não sabem se está atualizado");
+  }
+
+  // ---- acessibilidade e performance (só o que o HTML servido prova) ---------
+  // Tudo aqui é verificável sem navegador. O que exige renderização (contraste
+  // computado, foco visível, INP) fica pro screenshot/axe — não se inventa aqui.
+  const bodyHtml = (H.match(/<body\b[^>]*>([\s\S]*)<\/body>/i) || [, H])[1];
+  const temMain = /<main\b/i.test(bodyHtml) || /role=["']main["']/i.test(bodyHtml);
+  const primeiroLink = (bodyHtml.match(/<a\b[^>]*href=["']([^"']+)["']/i) || [])[1] || "";
+  if (!temMain && !primeiroLink.startsWith("#")) add("P2", "Sem <main> nem link de pular pro conteúdo — leitor de tela e teclado não têm atalho pro que importa (WCAG 2.4.1)");
+  const tabPositivo = (bodyHtml.match(/tabindex=["']?[1-9]\d*["']?/gi) || []).length;
+  if (tabPositivo) add("P2", `${tabPositivo} elemento(s) com tabindex positivo — a ordem de tabulação deixa de seguir a ordem da página`);
+  const idsExistentes = new Set([...H.matchAll(/\sid=["']([^"']+)["']/g)].map((m) => m[1]));
+  const refsQuebradas = [...bodyHtml.matchAll(/aria-(?:describedby|labelledby)=["']([^"']+)["']/gi)]
+    .flatMap((m) => m[1].split(/\s+/)).filter((id) => id && !idsExistentes.has(id));
+  if (refsQuebradas.length) add("P1", `aria-describedby/labelledby apontando pra id que não existe (${[...new Set(refsQuebradas)].slice(0, 3).join(", ")}) — o leitor de tela anuncia nada`);
+  const imgsCorpo = voidTags(bodyHtml, "img");
+  if (imgsCorpo.length && /loading=["']lazy["']/i.test(imgsCorpo[0].attrs)) add("P2", "A primeira imagem da página carrega com loading=lazy — se ela é a imagem principal (LCP), o navegador a adia e o site parece lento", imgsCorpo[0].attrs.slice(0, 120));
+  const altaPrioridade = imgsCorpo.filter((im) => /fetchpriority=["']high["']/i.test(im.attrs)).length;
+  if (altaPrioridade > 1) add("P2", `${altaPrioridade} imagens com fetchpriority=high — só a imagem principal deve ter; com várias, nenhuma é prioridade`);
+  const scriptsBloqueantes = tags(head, "script").filter((sc) => attr(sc.attrs, "src") && !/\b(defer|async)\b|type=["']module["']/i.test(sc.attrs)).length;
+  if (scriptsBloqueantes) add("P2", `${scriptsBloqueantes} <script src> no <head> sem defer/async — bloqueia o texto de aparecer até o script baixar`);
+  for (const v of tags(H, "video")) {
+    if (!/\bautoplay\b/i.test(v.attrs)) continue;
+    if (!/\bmuted\b/i.test(v.attrs)) add("P1", "Vídeo com autoplay sem muted — o navegador bloqueia e o vídeo não toca");
+    if (!/\bplaysinline\b/i.test(v.attrs)) add("P2", "Vídeo com autoplay sem playsinline — no iPhone abre em tela cheia em vez de tocar na página");
+  }
+  // WhatsApp como destino: o clique não aparece sozinho no Analytics.
+  const waLinks = [...bodyHtml.matchAll(/href=["'](https?:\/\/(?:wa\.me|api\.whatsapp\.com)[^"']*)["']/gi)].map((m) => m[1]);
+  p.whatsapp = waLinks.length;
+  for (const w of waLinks.slice(0, 3)) {
+    const num = (w.match(/wa\.me\/(\d+)/) || w.match(/phone=(\d+)/) || [])[1];
+    if (num && (num.length < 10 || num.length > 15)) add("P1", `Link do WhatsApp com número fora do padrão internacional (${num}) — precisa ser DDI+DDD+número, só dígitos`, w);
+    if (!/[?&]text=/.test(w)) add("P2", "Link do WhatsApp sem mensagem pré-preenchida (?text=) — sem ela você não sabe de que página a pessoa veio", w);
   }
 
   // links internos
@@ -716,7 +774,8 @@ async function discoverFromWeb(rootUrl, max) {
     if (r.status !== 200 || !r.body) { site.sitemaps.push({ url: sm, ok: false, status: r.status || r.error }); continue; }
     const locs = [...r.body.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)].map((m) => decode(m[1]));
     const isIndex = /<sitemapindex/i.test(r.body);
-    site.sitemaps.push({ url: sm, ok: true, entries: locs.length, index: isIndex, lastmod: /<lastmod>/i.test(r.body) });
+    const lastmods = [...r.body.matchAll(/<lastmod>\s*([^<]+?)\s*<\/lastmod>/gi)].map((m) => m[1]);
+    site.sitemaps.push({ url: sm, ok: true, entries: locs.length, index: isIndex, lastmod: lastmods.length > 0, lastmods });
     if (isIndex) queue.push(...locs.slice(0, 10));
     else locs.forEach((l) => urls.add(l.split("#")[0]));
   }
@@ -798,7 +857,11 @@ function grupoBloqueiaTudo(g) {
 }
 
 function auditRobots(site) {
-  const AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "anthropic-ai", "PerplexityBot", "Perplexity-User", "Google-Extended", "CCBot", "Applebot-Extended", "meta-externalagent", "Bytespider", "Amazonbot"];
+  // Dois grupos, dois efeitos. Bloquear um crawler de BUSCA tira o site das
+  // respostas daquela IA. Bloquear um de TREINO é decisão de licenciamento e não
+  // mexe na citação (OpenAI, Anthropic e Google documentam a separação).
+  const SEARCH_BOTS = ["OAI-SearchBot", "Claude-SearchBot", "PerplexityBot", "Bingbot", "Googlebot", "Amzn-SearchBot"];
+  const TRAIN_BOTS = ["GPTBot", "ClaudeBot", "anthropic-ai", "Google-Extended", "CCBot", "Applebot-Extended", "meta-externalagent", "Bytespider", "Amazonbot"];
   if (!site.robots) { bad("seo_tecnico", "robots.exists", "P1", "Sem robots.txt", "Sem robots.txt o crawler não recebe nenhuma diretriz e o sitemap não é anunciado."); return; }
   ok("seo_tecnico", "robots.exists", "P1", "robots.txt existe");
   const groups = parseRobotsGroups(site.robots);
@@ -808,30 +871,43 @@ function auditRobots(site) {
   } else ok("seo_tecnico", "robots.blanket", "P0", "robots.txt não bloqueia o site");
   if (/sitemap:/i.test(site.robots)) ok("seo_tecnico", "robots.sitemap", "P2", "robots.txt anuncia o sitemap");
   else bad("seo_tecnico", "robots.sitemap", "P2", "robots.txt não anuncia o sitemap", "Adicione `Sitemap: https://.../sitemap.xml`.");
-  const missing = AI_BOTS.filter((b) => !gruposDe(groups, b).length);
   // Bloqueio explícito: o bot tem grupo PRÓPRIO e esse grupo fecha a raiz.
-  const bloqueadoDireto = AI_BOTS.filter((b) => gruposDe(groups, b).some(grupoBloqueiaTudo));
   // Herdado: bot sem grupo próprio cai no `*` — se o `*` fecha tudo, ele também está fora.
-  const bloqueadoPeloAsterisco = bloqueioGeral ? missing : [];
-  const blocked = [...bloqueadoDireto, ...bloqueadoPeloAsterisco];
-  if (blocked.length) {
-    const comoFoi = bloqueadoDireto.length && bloqueadoPeloAsterisco.length
-      ? `Regra própria para ${bloqueadoDireto.join(", ")}; os demais herdam o \`Disallow: /\` do \`User-agent: *\`.`
-      : bloqueadoDireto.length
+  const bloqueados = (lista) => {
+    const direto = lista.filter((b) => gruposDe(groups, b).some(grupoBloqueiaTudo));
+    const herdado = bloqueioGeral ? lista.filter((b) => !gruposDe(groups, b).length) : [];
+    return { direto, herdado, todos: [...direto, ...herdado] };
+  };
+  const busca = bloqueados(SEARCH_BOTS);
+  if (busca.todos.length) {
+    const comoFoi = busca.direto.length && busca.herdado.length
+      ? `Regra própria para ${busca.direto.join(", ")}; os demais herdam o \`Disallow: /\` do \`User-agent: *\`.`
+      : busca.direto.length
         ? "Cada um tem regra própria com `Disallow: /` no seu bloco."
         : "Nenhum tem regra própria — todos herdam o `Disallow: /` do `User-agent: *`.";
-    bad("geo", "robots.ai", "P0", `robots.txt BLOQUEIA crawler de IA: ${blocked.join(", ")}`, `${comoFoi} Bloquear o crawler é abrir mão de ser citado por aquela IA — decisão consciente, não default.`);
-  }
-  else if (missing.length > 6) bad("geo", "robots.ai", "P2", `robots.txt não menciona ${missing.length} crawlers de IA`, `Sem regra explícita eles caem no \`*\` (permitido). Declarar Allow explícito para ${missing.slice(0, 5).join(", ")}… é sinal de intenção e evita bloqueio acidental futuro.`);
-  else ok("geo", "robots.ai", "P1", "Crawlers de IA liberados explicitamente no robots.txt");
+    bad("geo", "robots.ai", "P0", `robots.txt BLOQUEIA crawler de BUSCA de IA: ${busca.todos.join(", ")}`, `${comoFoi} Esses são os robôs que alimentam a resposta (ChatGPT search, Claude, Perplexity, Copilot, AI Mode). Bloqueados, a IA não consegue citar o site. Os crawlers de TREINO são outra decisão — ver robots.ai.train.`);
+  } else ok("geo", "robots.ai", "P0", "Crawlers de busca de IA liberados (OAI-SearchBot, Claude-SearchBot, PerplexityBot, Bingbot, Googlebot)");
+  const treino = bloqueados(TRAIN_BOTS);
+  if (treino.todos.length) {
+    ok("geo", "robots.ai.train", "P2", `Crawlers de TREINO bloqueados: ${treino.todos.join(", ")} (decisão de licenciamento, não afeta citação)`,
+      "GPTBot, ClaudeBot, Google-Extended, CCBot e companhia alimentam treino de modelo, não a resposta. Bloquear é legítimo; só não confunda com os de busca. Google-Extended não mexe nem em Search nem em AI Overviews.");
+  } else ok("geo", "robots.ai.train", "P2", "Nenhum crawler de treino bloqueado — o conteúdo pode entrar em dataset de modelo (decisão sua; não afeta citação)");
 }
 
 function auditSitemap(site, crawled) {
   const good = (site.sitemaps || []).filter((s) => s.ok);
   if (!good.length) { bad("seo_tecnico", "sitemap.exists", "P1", "Sem sitemap.xml acessível", "O crawler descobre páginas só por link — páginas novas demoram ou nunca entram."); return; }
   ok("seo_tecnico", "sitemap.exists", "P1", `sitemap.xml OK (${good.reduce((a, s) => a + (s.entries || 0), 0)} URLs)`);
-  if (good.some((s) => s.lastmod)) ok("seo_tecnico", "sitemap.lastmod", "P2", "sitemap tem <lastmod>");
-  else bad("seo_tecnico", "sitemap.lastmod", "P2", "sitemap sem <lastmod>", "Sem data o crawler não sabe o que mudou e re-rastreia por chute.");
+  // O Google só usa <lastmod> quando ele é verificavelmente correto, e diz que sem
+  // lastmod é melhor que lastmod errado. Então: ausente não é defeito; presente e
+  // igual em todas as URLs é sinal de data gerada em massa.
+  const datas = good.flatMap((s) => s.lastmods || []);
+  const distintas = new Set(datas.map((d) => d.slice(0, 10)));
+  const futuro = datas.filter((d) => Date.parse(d) > Date.now() + 86400000).length;
+  if (!datas.length) ok("seo_tecnico", "sitemap.lastmod", "P2", "sitemap sem <lastmod> (aceitável: o Google prefere nenhuma data a uma data errada)");
+  else if (futuro) bad("seo_tecnico", "sitemap.lastmod", "P2", `${futuro} <lastmod> no futuro`, "Data que ainda não chegou é data inventada — o Google passa a ignorar o campo no site inteiro.");
+  else if (datas.length >= 5 && distintas.size === 1) bad("seo_tecnico", "sitemap.lastmod", "P2", `<lastmod> idêntico (${[...distintas][0]}) em todas as ${datas.length} URLs`, "Parece a data do build, não a da última mudança real de cada página. O Google só usa lastmod quando ele é verificavelmente correto; aqui ele vai ignorar — e pode passar a desconfiar do sitemap.");
+  else ok("seo_tecnico", "sitemap.lastmod", "P2", `sitemap com <lastmod> plausível (${distintas.size} data(s) distinta(s))`);
   // "Não consegui buscar" ≠ "respondeu 200". Página cujo fetch estourou (DNS,
   // TLS, timeout) não tem `status` nenhum — o filtro antigo (`p.status >= 300`)
   // dava `undefined >= 300` = false e ela entrava calada no balde dos OK. O
@@ -858,11 +934,11 @@ function auditSitemap(site, crawled) {
 function auditLlmsTxt(site, pages, ctx) {
   const r = site.llms;
   if (!r || r.status !== 200 || !r.body || /<html/i.test(r.body)) {
-    bad("geo", "llms.exists", "P1", "Sem /llms.txt", "É o mapa que você entrega pronto pra ChatGPT/Perplexity/Claude: quem você é, o que vende, onde está cada coisa. Sem ele a IA monta esse mapa sozinha — e erra.");
+    bad("geo", "llms.exists", "P2", "Sem /llms.txt (informativo)", "Nenhum buscador de IA declara ler o llms.txt de terceiros, e o Google diz que ignora. Ele serve a agentes de código e assistentes que o usuário aponta pro site, e custa dez minutos. Vale ter — e vale mais ter certo do que ter: é onde o texto de outro negócio mais sobrevive.");
     return;
   }
   const body = r.body;
-  ok("geo", "llms.exists", "P1", "/llms.txt existe");
+  ok("geo", "llms.exists", "P2", "/llms.txt existe (informativo: serve a agentes; não é fator de citação)");
 
   const h1 = (body.match(/^#\s+(.+)$/m) || [, ""])[1].trim();
   const quote = (body.match(/^>\s*([\s\S]*?)(?:\n\n|\n#)/m) || [, ""])[1].replace(/\n>\s?/g, " ").trim();
@@ -929,6 +1005,14 @@ async function auditHostConsistency(rootUrl) {
     else if (last && last.status === 404) ok("seo_tecnico", `host.${v.label}`, "P1", `${v.label} não existe (404) — sem duplicidade`);
     else bad("seo_tecnico", `host.${v.label}`, "P1", `${v.label} não converge pro host canônico`, `Terminou em ${r.url} (${last && last.status})`);
   }
+  // HEAD: robôs de busca e os fetchers que a IA dispara a pedido do usuário
+  // fazem HEAD antes do GET. Servidor que responde diferente confunde os dois.
+  try {
+    const [h, g] = await Promise.all([fetchChain(rootUrl, { method: "HEAD" }), fetchChain(rootUrl)]);
+    if (h.error || g.error) skip("seo_tecnico", "host.head", "P2", "HEAD não medido", h.error || g.error);
+    else if (h.status !== g.status) bad("seo_tecnico", "host.head", "P2", `HEAD devolve ${h.status} e GET devolve ${g.status} na home`, "Crawler que usa HEAD pra checar a página antes de baixar vê um status diferente do real.");
+    else ok("seo_tecnico", "host.head", "P2", "HEAD e GET respondem igual na home");
+  } catch (e) { skip("seo_tecnico", "host.head", "P2", "HEAD não medido", String(e.message)); }
   // soft-404
   const r404 = await fetchChain(new URL(`/pagina-que-nao-existe-${Date.now()}`, root).toString());
   if (r404.status === 404 || r404.status === 410) ok("seo_tecnico", "soft404", "P1", "URL inexistente devolve 404");
@@ -1273,7 +1357,12 @@ function writeReports(outDir, payload) {
       const exists = fs.existsSync(fp);
       if (name === "llms.txt") {
         if (exists) { site.llms = { status: 200, body: fs.readFileSync(fp, "utf8") }; auditLlmsTxt(site, pages, ctx); }
-        else bad("geo", "llms.exists", "P1", "Sem llms.txt na pasta", "É o mapa que você entrega pronto pras IAs.");
+        else bad("geo", "llms.exists", "P2", "Sem llms.txt na pasta (informativo)", "Serve a agentes de código e assistentes; não é fator de citação. Custa dez minutos.");
+      } else if (exists && name === "robots.txt") {
+        // Em pasta local o robots.txt está no disco: ler e auditar igual ao modo --url
+        // (bloqueio de crawler de busca de IA é P0 e não pode esperar a publicação).
+        site.robots = fs.readFileSync(path.join(dir, name), "utf8");
+        auditRobots(site);
       } else if (exists) ok("seo_tecnico", `file.${name}`, "P1", `${name} presente`);
       else bad("seo_tecnico", `file.${name}`, "P1", `Sem ${name}`, "");
     }
@@ -1407,6 +1496,29 @@ function writeReports(outDir, payload) {
   }
   bucket("page.forms", "medicao", "P1", byMsg(/[Ff]ormulário/), "Problemas de formulário nas páginas");
   bucket("page.analytics", "medicao", "P1", byMsg(/Código de medição/), "Medição duplicada");
+  // Consentimento: no Brasil (guia da ANPD) e na Europa, cookie que não é
+  // essencial — GA4, Meta Pixel, Clarity — só depois de a pessoa aceitar. O
+  // Consent Mode do Google resolve sem perder a medição: `gtag('consent','default',
+  // {analytics_storage:'denied'})` antes do config. Sem isso, a tag grava cookie
+  // no primeiro byte, e o banner (se existe) é decorativo.
+  if (live.length) {
+    const comCookieTool = live.filter((p) => (p.analytics || []).some((a) => /GA4|Tag Manager|Meta Pixel|Clarity|Hotjar/.test(a.tool)));
+    if (!comCookieTool.length) skip("medicao", "consent.mode", "P2", "Consentimento não avaliado", "Nenhuma ferramenta que grava cookie foi detectada nas páginas auditadas.");
+    else {
+      const comConsent = live.filter((p) => p.consentDefault).length;
+      if (comConsent >= comCookieTool.length) ok("medicao", "consent.mode", "P2", "Medição declara consentimento padrão antes de carregar (Consent Mode)");
+      else bad("medicao", "consent.mode", "P2", `Medição carrega sem consentimento declarado em ${comCookieTool.length - comConsent}/${comCookieTool.length} página(s)`,
+        "GA4/Pixel/Clarity gravam cookie no primeiro acesso. No Brasil a ANPD orienta que cookie não essencial fique desligado até a pessoa aceitar. Solução que não perde dado: Consent Mode — `gtag('consent','default',{analytics_storage:'denied', ad_storage:'denied'})` antes do `gtag('config')`, e o banner liga depois do aceite. Site sem cookie não essencial dispensa banner.");
+    }
+    const comWa = live.filter((p) => p.whatsapp > 0);
+    if (!comWa.length) skip("medicao", "whatsapp.tracked", "P2", "WhatsApp não avaliado", "Nenhum link wa.me / api.whatsapp.com nas páginas auditadas.");
+    else {
+      const rastreado = comWa.filter((p) => p.whatsappTracked).length;
+      if (rastreado === comWa.length) ok("medicao", "whatsapp.tracked", "P2", "Clique no WhatsApp tem evento de medição");
+      else bad("medicao", "whatsapp.tracked", "P2", `Link do WhatsApp sem evento de medição em ${comWa.length - rastreado}/${comWa.length} página(s)`,
+        "O clique em wa.me não aparece sozinho no Analytics — vira lead invisível. Dispare um evento no clique (gtag('event','whatsapp_click') ou tag de clique no GTM) e marque como conversão. Mede intenção, não conversa iniciada.");
+    }
+  }
   const posts = live.filter((p) => p.isPost);
   if (posts.length) bucket("page.blog", "seo_conteudo", "P1", byMsg(/[Pp]ost (de blog )?sem/), "Problemas de schema/data/autor em post de blog");
   else skip("seo_conteudo", "page.blog", "P1", "Nenhum post de blog nas páginas auditadas", "Os checks específicos de blog (Article, autor, data) só rodam quando existe post.");

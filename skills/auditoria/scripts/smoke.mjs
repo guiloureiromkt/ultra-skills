@@ -6,6 +6,7 @@
 //
 //   1. ACUSOU o que tem defeito   (sem isso o auditor dá falso conforto)
 //   2. NÃO acusou o que está certo (sem isso ninguém lê o relatório até o fim)
+//   3. Um site CORRETO atinge o gate (sem isso o loop nunca termina)
 //
 // Rode depois de mexer no audit.mjs, e rode uma vez antes da primeira auditoria
 // de verdade — é 5 segundos e é a diferença entre "a ferramenta está boa" e
@@ -39,8 +40,9 @@ fs.writeFileSync(path.join(SITE, "boa.html"), `<!doctype html>
 <link rel="canonical" href="https://exemplo.com.br/boa.html">
 <link rel="alternate" type="application/rss+xml" href="https://exemplo.com.br/feed.xml">
 <meta property="og:title" content="Quanto custa uma reforma de cozinha"><meta property="og:description" content="Faixas de preco reais"><meta property="og:image" content="https://exemplo.com.br/capa.png"><meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Quanto custa uma reforma de cozinha em 2026","datePublished":"2026-07-01","dateModified":"2026-07-20","author":{"@type":"Person","name":"Fulana de Tal"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Quanto custa uma reforma de cozinha em 2026","datePublished":"2026-07-01","dateModified":"2026-07-20","author":{"@type":"Person","name":"Fulana de Tal","url":"https://exemplo.com.br/autor/fulana"}}</script>
 </head><body>
+<main>
 <h1>Quanto custa uma reforma de cozinha em 2026</h1>
 <p>Uma reforma de cozinha no Brasil custa hoje entre R$ 1.200 e R$ 4.500 por metro quadrado, e a faixa depende quase toda de tres decisoes: bancada, marcenaria e hidraulica. Quem mantem o ponto de agua onde esta economiza cerca de um terco do orcamento total, segundo levantamento do Sinduscon de 2026.</p>
 <h2>O que entra na faixa mais barata?</h2>
@@ -56,20 +58,23 @@ fs.writeFileSync(path.join(SITE, "boa.html"), `<!doctype html>
 <img src="/capa.png" alt="Cozinha reformada com bancada de granito" width="1200" height="630">
 <a href="/outra.html">Ver tabela completa de precos</a>
 <form action="/api/contato" method="post">
-  <label for="e">Seu e-mail</label><input id="e" name="email" type="email">
+  <label for="e">Seu e-mail</label><input id="e" name="email" type="email" autocomplete="email">
   <label for="itens[]">Comodos a reformar</label><input id="itens[]" name="itens[]" type="text">
   <label for="orcamento (R$)">Orcamento previsto</label><input id="orcamento (R$)" name="orcamento" type="text">
   <label for="prazo)">Prazo desejado</label><input id="prazo)" name="prazo" type="text">
   <input type="text" name="website" style="display:none">
   <button>Enviar</button>
 </form>
+</main>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag('consent','default',{analytics_storage:'denied',ad_storage:'denied'});</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ABC1234567"></script>
 </body></html>`);
 
 fs.writeFileSync(path.join(SITE, "ruim.html"), `<!doctype html>
 <html><head>
 <meta name="robots" content="index">
-<meta name="robots" content="max-image-preview:large">
+<meta name="robots" content="max-image-preview:large, max-snippet:0">
+<script src="/app.js"></script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoObject","name":"Institucional"}</script>
 <script type="application/ld+json">{ isto nao e json valido }</script>
 </head><body>
@@ -78,8 +83,10 @@ fs.writeFileSync(path.join(SITE, "ruim.html"), `<!doctype html>
 <p>Somos uma agencia de comunicacao e marketing com 25 anos de estrada, apostamos na multidisciplinaridade e atendemos marcas nacionais e internacionais de diversos setores.</p>
 <video autoplay muted loop><source src="/broll.mp4"></video>
 <img src="/foto.png">
-<form><input name="nome"><button>Enviar</button></form>
-<a href="/boa.html"></a>
+<form><input name="nome"><input name="email" type="email" aria-describedby="dica-que-nao-existe"><button>Enviar</button></form>
+<a href="/boa.html" tabindex="2"></a>
+<a href="https://wa.me/55119">Fale no WhatsApp</a>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RUIM000000"></script>
 </body></html>`);
 
 fs.writeFileSync(path.join(SITE, "llms.txt"), `# Marca Certa
@@ -154,12 +161,15 @@ const PORTA_MORTA = 9; // discard — recusa conexão: força FALHA de fetch, n�
 
 // A armadilha: GPTBot está LIBERADO, mas o `Disallow: /` do SemrushBot vem
 // logo abaixo. A regex antiga atravessava a fronteira do bloco e acusava o
-// GPTBot de bloqueado — P0 falso. ClaudeBot, esse sim, está bloqueado.
+// GPTBot de bloqueado — P0 falso. ClaudeBot (treino) e Claude-SearchBot (busca)
+// estão bloqueados de verdade — e o auditor tem que tratá-los diferente: só o
+// de busca tira o site da resposta da IA.
 const ROBOTS_ARMADILHA = [
   "User-agent: *", "Allow: /", "",
   "User-agent: GPTBot", "Allow: /", "",
   "User-agent: SemrushBot", "Disallow: /", "",
   "User-agent: ClaudeBot", "Disallow: /", "",
+  "User-agent: Claude-SearchBot", "Disallow: /", "",
   `Sitemap: ${ORIGIN}/sitemap.xml`, "",
 ].join("\n");
 
@@ -219,6 +229,19 @@ const casos = [
   ["acusa imagem sem alt", /sem atributo alt/.test(msgs)],
   ["acusa formulário sem destino no HTML", /Formulário sem `action`/.test(msgs)],
   ["acusa link sem texto âncora", /sem texto âncora/.test(msgs)],
+  // 2026: o que o HTML servido prova sobre citação, acessibilidade e performance
+  ["acusa nosnippet / max-snippet:0 (tira dos AI Overviews)", /max-snippet:0/.test(msgs)],
+  ["acusa script no <head> sem defer/async", /sem defer\/async/.test(msgs)],
+  ["acusa campo de identidade sem autocomplete", /sem autocomplete/.test(msgs)],
+  ["acusa tabindex positivo", /tabindex positivo/.test(msgs)],
+  ["acusa aria-describedby apontando pra id inexistente", /id que não existe/.test(msgs)],
+  ["acusa vídeo autoplay sem playsinline", /sem playsinline/.test(msgs)],
+  ["acusa link do WhatsApp com número fora do padrão", /WhatsApp com número fora do padrão/.test(msgs)],
+  ["acusa medição sem consentimento declarado (site ruim)", falhas.has("consent.mode")],
+  ["acusa WhatsApp sem evento de medição", falhas.has("whatsapp.tracked")],
+  ["llms.txt é informativo (P2), não fator de citação", rel.findings.find((f) => f.id === "llms.exists")?.severity === "P2"],
+  ["NÃO acusa a página boa de faltar <main>/skip link", !/Sem <main>/.test(boaMsgs)],
+  ["NÃO acusa a página boa de campo sem autocomplete", !/sem autocomplete/.test(boaMsgs)],
   // O outro lado: a página boa não pode gerar ruído.
   ["NÃO acusa a página boa de faltar BLUF", !/boa\.html/.test(JSON.stringify(rel.pages.find((p) => /boa/.test(p.file || ""))?.issues?.filter((i) => /BLUF/.test(i.msg)) || []))],
   ["NÃO acusa a página boa de faltar heading-pergunta",
@@ -245,13 +268,21 @@ const casos = [
   ["site correto fica sem nenhum P0", limpo !== null && limpo.scores.p0Total === 0],
   ["nenhum eixo do site correto fica abaixo de 90",
     limpo !== null && Object.values(limpo.scores.per).every((v) => v.score === null || v.score >= 90)],
+  ["em pasta local o robots.txt do disco é auditado (crawlers de busca liberados = pass)",
+    limpo !== null && limpo.findings.find((f) => f.id === "robots.ai")?.status === "pass"],
+  ["site correto com Consent Mode passa no check de consentimento",
+    limpo !== null && limpo.findings.find((f) => f.id === "consent.mode")?.status === "pass"],
 
   // --- modo --url: robots.txt e status HTTP ---------------------------------
   ["a auditoria por URL roda até o fim", vivo !== null],
-  ["acusa o bot que ESTÁ bloqueado no próprio bloco (ClaudeBot)",
-    /ClaudeBot/.test(acheVivo("robots.ai")?.title || "")],
+  ["acusa como P0 o crawler de BUSCA bloqueado no próprio bloco (Claude-SearchBot)",
+    acheVivo("robots.ai")?.status === "fail" && /Claude-SearchBot/.test(acheVivo("robots.ai")?.title || "")],
+  ["registra o crawler de TREINO bloqueado (ClaudeBot) como informativo, não como P0",
+    acheVivo("robots.ai.train")?.status === "pass" && /ClaudeBot/.test(acheVivo("robots.ai.train")?.title || "")
+    && !/ClaudeBot/.test(acheVivo("robots.ai")?.title || "")],
   ["NÃO acusa bot liberado por causa do Disallow do bloco vizinho (GPTBot)",
-    vivo !== null && !/GPTBot/.test(acheVivo("robots.ai")?.title || "")],
+    vivo !== null && !/GPTBot/.test((acheVivo("robots.ai")?.title || "") + (acheVivo("robots.ai.train")?.title || ""))],
+  ["HEAD e GET comparados na home", ["pass", "fail"].includes(acheVivo("host.head")?.status)],
   ["não confunde bloqueio de um bot com bloqueio do site inteiro",
     acheVivo("robots.blanket")?.status === "pass"],
   ["separa 'falhou ao buscar' de 'respondeu com status ruim'",
