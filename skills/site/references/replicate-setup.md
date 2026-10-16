@@ -51,7 +51,12 @@ echo 'export REPLICATE_API_TOKEN="r8_seu_token_aqui"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-**5. Confirme que pegou:**
+**5. Instale a única dependência do script de imagens** (uma vez):
+```bash
+pip install requests
+```
+
+**6. Confirme que pegou:**
 ```bash
 node -e "console.log(process.env.REPLICATE_API_TOKEN ? 'token OK' : 'token NAO encontrado')"
 ```

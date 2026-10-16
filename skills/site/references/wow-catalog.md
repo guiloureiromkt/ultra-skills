@@ -93,7 +93,12 @@ wow."
   (scrub: 0.5-1), cursor com spring/lerp dentro de `requestAnimationFrame`
   (vanilla; em React, `useMotionValue` — nunca `useState` por frame). Never
   animate layout properties.
-- Reduced motion: the composed final state, static, no pin.
+- Reduced motion: the composed final state, static, no pin. (`screenshot.js`
+  recarrega com `prefers-reduced-motion: reduce` e acusa o que ficou invisível.)
+- Native scroll-driven animations (`animation-timeline: scroll()`) are not
+  Baseline yet (Firefox still behind a flag in 2026): use them only inside
+  `@supports (animation-timeline: scroll())` with the GSAP path as the default,
+  and keep the final state visible without either.
 - Mobile: the technique must degrade deliberately (shorter pin, cursor
   effects replaced by scroll equivalents, turntable becomes a swipeable
   sequence) — declare the degradation in the brief.

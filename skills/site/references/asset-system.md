@@ -93,12 +93,22 @@ relative (`assets/...`). Downscale: hero ≤2k, cutouts ~800px, icons ~256px.
      `twitter:card=summary_large_image`, absolute image URLs
    - **Meta de descoberta** (obrigatória em toda página indexável):
      `<meta name="robots" content="max-image-preview:large, max-snippet:-1, max-video-preview:-1">`.
-     É o gate do card de imagem grande na busca e da elegibilidade ao Discover.
-     Cicatriz 2026-07-25 (guiloureiro.com.br): faltava nas 129 páginas → Discover
-     com ZERO impressão em 90 dias, mesmo com schema, autor e imagem 1344px OK.
+     Sem ela o Google não monta o card de imagem grande e o Discover quase não
+     mostra a página (a doc fala em probabilidade; num site real sem a linha,
+     o Discover ficou em zero por três meses com todo o resto certo).
      Duas regras irmãs: **uma só** meta `robots` por página (página `noindex` NÃO
      recebe esta — conflita), e a imagem de `og:image` precisa ter **≥1200px de
      largura no arquivo** (medir o arquivo; o atributo `width` do HTML mente).
+   - **Entidade no JSON-LD** (home): `Organization` ou o tipo específico do
+     negócio (`LegalService`, `Dentist`, `LocalBusiness`…) com `name`, `url`
+     no host canônico, `logo` (≥112px), `sameAs` (perfis), endereço e
+     telefone iguais ao Google Business Profile. Post de blog: `BlogPosting`
+     com `datePublished`, `dateModified` reais e `author` → `Person` com
+     `url` de página própria. A `og:image` e a `primaryImageOfPage` apontam
+     pra mesma URL (o Google usa as duas pra escolher a imagem).
+   - **`llms.txt`** gerado a partir do brief (nome, resumo em blockquote,
+     seções com links no host canônico). Não é fator de citação; serve a
+     agentes e tem que estar certo, nunca copiado de outro projeto.
    Sanity-check the favicon at 16px: if the mark turns to noise, use a
    simplified glyph (initial letter on brand ground) for the small sizes
    rather than shrinking the full logo.

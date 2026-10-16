@@ -4,7 +4,7 @@ Todo check deste arquivo é sobre **você**, não sobre o site. São armadilhas 
 
 Isso é pior que não achar o problema. Achado falso gasta o tempo de quem vai corrigir, e depois de dois deles a pessoa para de ler o relatório inteiro — inclusive os P0 verdadeiros.
 
-**As oito abaixo são erros reais, cometidos em campo, cada um a poucos segundos de virar um achado inventado num relatório entregue.**
+**As onze abaixo são erros reais, cometidos em campo ou prescritos por guias desatualizados, cada um a poucos segundos de virar um achado inventado num relatório entregue.**
 
 ---
 
@@ -44,7 +44,7 @@ Painéis de preview e navegadores sem interface às vezes reportam viewport zero
 
 Captura via protocolo de depuração congela em página pesada — já estourou 30 segundos duas vezes seguidas. É limite da ferramenta, não sintoma do site.
 
-**Caia pra leitura textual** (o HTML, a árvore de acessibilidade, medição via JavaScript). Nesta máquina, o caminho provado é `puppeteer-core` + Chrome instalado, nunca o preview embutido (`CLAUDE.md §10.4`).
+**Caia pra leitura textual** (o HTML, a árvore de acessibilidade, medição via JavaScript). Quando precisar de captura, o caminho que funciona é `puppeteer-core` + Chrome instalado (o `screenshot.js` da `ultra:site`), não o preview embutido de um painel.
 
 ---
 
@@ -86,11 +86,35 @@ Aconteceu: um `Disallow: /` de crawler de SEO, três linhas abaixo, fez o GPTBot
 
 DNS que não resolve, TLS que quebra, timeout: nesses casos não existe status HTTP nenhum. Um filtro do tipo "status ≥ 300 é problema" trata a ausência de status como se fosse 200 — e o relatório sai afirmando "todas as páginas devolvem 200" tendo medido só uma parte delas. É a pior classe de mentira do relatório: a que soa como aprovação.
 
-**Separe os três estados: respondeu 200 · respondeu outro status · não foi medido.** O terceiro é achado próprio (`fetch.failed`), e o texto do check só fala das páginas que realmente foram medidas. Nesta máquina, falha de TLS em massa costuma ser o antivírus — rode de novo com `NODE_OPTIONS=--use-system-ca` antes de culpar o site (`CLAUDE.md §10.1`).
+**Separe os três estados: respondeu 200 · respondeu outro status · não foi medido.** O terceiro é achado próprio (`fetch.failed`), e o texto do check só fala das páginas que realmente foram medidas. Falha de TLS em massa costuma ser antivírus ou proxy interceptando HTTPS na máquina de quem audita — rode de novo com `NODE_OPTIONS=--use-system-ca` antes de culpar o site.
 
 ---
 
-## A regra que resume as oito
+## B9 · Crawler de treino bloqueado não é "a IA não te cita"
+
+**Se** o robots.txt bloqueia `GPTBot`, `ClaudeBot` ou `Google-Extended`, **não conclua** que o site está fora do ChatGPT, do Claude ou do AI Overview.
+
+Esses são os robôs de **treino**. Os que alimentam a resposta são outros: `OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`, `Bingbot`, `Googlebot`. Bloquear treino é decisão de licenciamento; bloquear busca é sumir da resposta. O `audit.mjs` separa os dois (`robots.ai` × `robots.ai.train`). Confundir vira P0 falso com a correção errada: o dono libera o treino, nada muda, e a confiança no relatório acaba.
+
+---
+
+## B10 · Schema sem rich result não é defeito
+
+**Se** o `FAQPage` ou o `HowTo` não aparecem na busca, **não conclua** que o schema está errado.
+
+O Google desligou o rich result de FAQ em 2026 e o de HowTo em 2023. O schema continua válido e inofensivo; só não rende nada visual. O que vira achado é outra coisa: schema que diz o que a página **não** diz, porque isso o Google trata como spam. Cobrar FAQ "pra ganhar o acordeão na busca" é recomendar 2023.
+
+---
+
+## B11 · "Sem llms.txt" não explica citação nenhuma
+
+**Se** o site não tem `/llms.txt`, **não conclua** que é por isso que a IA não cita.
+
+O Google diz que ignora o arquivo, e nenhum buscador de IA declara ler o de terceiros. Ele serve a agentes que o usuário aponta pro site. É informativo (P2): vale ter, vale mais estar certo. Colocar llms.txt no topo do plano de correção é prometer um efeito que não existe.
+
+---
+
+## A regra que resume as onze
 
 Toda conclusão precisa passar por: **eu medi isso, ou eu deduzi isso?**
 

@@ -34,25 +34,35 @@ Buscador e crawler de IA leem o HTML servido, sem executar JavaScript.
 - Teste rápido: `curl -s <url> | grep -c "<trecho do texto principal>"`. Zero = problema.
 - Armadilha inversa: `window`, `document` ou `localStorage` no topo de módulo quebram o build no servidor. Acesso a browser API vive dentro de `useEffect` ou atrás de `typeof window !== "undefined"`.
 
-## 5 · Acessibilidade (P1 — e é obrigação legal em vários contextos)
+## 5 · Acessibilidade (P1 — e é obrigação legal)
 
-Vale por si, e o buscador usa os mesmos sinais.
+No Brasil a LBI (lei 13.146/2015, art. 63) obriga acessibilidade em site de empresa com sede ou representação no país, e a norma técnica é a ABNT NBR 17225:2025, baseada no WCAG 2.2. Na União Europeia, o EAA vale desde junho de 2025 para quem vende a consumidor. A régua técnica nos dois casos é o WCAG 2.2 nível AA. E o buscador usa os mesmos sinais.
 
-- Toda `<img>` com `alt`. Decorativa leva `alt=""` (explicitamente vazio, não ausente) — isso diz ao leitor de tela "pule isto".
+O que o HTML e o CSS provam (o `audit.mjs` já cobre parte):
+- Toda `<img>` com `alt`. Decorativa leva `alt=""` (explicitamente vazio, não ausente): diz ao leitor de tela "pule isto".
 - Botão que é só ícone precisa de `aria-label`. Sem isso o leitor de tela anuncia "botão".
-- Todo `<input>` com `<label>` associado por `for`/`id`. Placeholder não é label — ele some quando a pessoa digita.
-- Navegação por teclado: dá pra chegar em tudo com Tab, e o foco é visível? `outline: none` sem substituto é falha.
-- Contraste mínimo 4.5:1 pra texto normal. Cinza-claro sobre branco é o erro mais comum de site bonito.
-- Headings em ordem, sem pular nível — é o índice pelo qual quem usa leitor de tela navega.
-- `prefers-reduced-motion` respeitado onde há animação. Movimento involuntário causa enjoo real em parte das pessoas.
+- Todo campo com `<label>` associado por `for`/`id`. Placeholder não é label: some quando a pessoa digita. Campo de nome, e-mail, telefone e CEP com `autocomplete` (WCAG 1.3.5) e `type`/`inputmode` certos. Erro ligado por `aria-describedby` + `aria-invalid`.
+- `aria-describedby` e `aria-labelledby` apontando para `id` que existe.
+- Um `<main>`; `<nav>` com `aria-label` quando há mais de uma; link de pular pro conteúdo (WCAG 2.4.1).
+- Nenhum `tabindex` positivo. `outline: none` só com `:focus-visible` substituto (WCAG 2.4.7).
+- Header fixo ou sticky com `scroll-padding-top`: senão o foco e as âncoras caem embaixo dele (WCAG 2.4.11, novo no 2.2).
+- Alvo de clique com 24×24px no mínimo (WCAG 2.5.8, novo no 2.2); link dentro de frase fica de fora.
+- Headings em ordem, sem pular nível: é o índice de quem navega por leitor de tela.
+- Contraste 4,5:1 para texto, 3:1 para texto grande e componentes. Cinza-claro sobre branco é o erro mais comum de site bonito. (Só é medível de verdade com navegador: cor sobre imagem ou gradiente não se calcula do CSS.)
+- `prefers-reduced-motion` respeitado onde há animação, e nada que fique invisível quando a animação é desligada. Movimento involuntário causa enjoo real.
+- Vídeo autoplay mudo, com `playsinline` e botão de pausa (WCAG 2.2.2); carrossel sem auto-avanço.
+
+O que exige navegador real (contraste computado, foco visível de fato, ordem de Tab, reflow a 320px, zoom 200%) é "não medido" até alguém rodar. Ferramenta automática pega perto de 57% dos problemas de acessibilidade (Deque, 13 mil páginas); o resto é teste manual, e o relatório diz isso.
 
 ## 6 · Performance (P1/P2)
 
 - Imagem servida em resolução muito maior que a exibida. Foto de 4000px num card de 400px é o desperdício mais comum e o mais fácil de corrigir.
 - Formato moderno (WebP/AVIF) com fallback.
 - `width`/`height` (ou `aspect-ratio`) em toda imagem — sem isso a página pula enquanto carrega, o que conta contra na métrica de experiência do Google.
-- Fonte de CDN externo bloqueia o texto aparecer. Fonte local com `font-display: swap` é o padrão.
-- Script de terceiro (chat, pixel, analytics) carregado de forma bloqueante.
+- Imagem do hero (a maior acima da dobra, o LCP) com `loading="lazy"`, ou sem `fetchpriority="high"`; mais de uma com `fetchpriority="high"`.
+- Fonte de CDN externo bloqueia o texto aparecer. Fonte local com `font-display: swap` é o padrão; preload só da fonte do hero; fallback com `size-adjust` pra página não pular quando a fonte chega.
+- Script de terceiro (chat, pixel, analytics) carregado de forma bloqueante, ou `<script src>` no `<head>` sem `defer`/`async`.
+- Metas vigentes: LCP ≤ 2,5 s, INP ≤ 200 ms (clique e tecla, não scroll), CLS ≤ 0,1.
 - **CDN externo em geral é achado** — é ponto de falha e de vazamento fora do seu controle, e uma política de segurança de conteúdo costuma barrar em silêncio. Vendorize.
 
 ## 7 · Robustez
@@ -63,7 +73,16 @@ Vale por si, e o buscador usa os mesmos sinais.
 - `console.log` com dado de usuário em produção.
 - Chave de API chamada direto do navegador (deveria passar por rota no servidor).
 
-## 8 · Dependências
+## 8 · Consentimento e medição (P2, mas é lei)
+
+GA4, Tag Manager, Meta Pixel, Clarity e Hotjar gravam cookie no primeiro acesso. No Brasil o guia da ANPD (2022) orienta que cookie não essencial fique desligado até a pessoa aceitar, com "rejeitar" no primeiro nível e sem botão único de "aceito". Na Europa é obrigação.
+
+- **O jeito que não perde dado:** Consent Mode. `gtag('consent','default',{analytics_storage:'denied', ad_storage:'denied'})` **antes** do `gtag('config')` ou do GTM; o banner liga depois do aceite. O GA4 ainda recebe pings sem cookie pra modelar.
+- Banner com três botões do mesmo tamanho: aceitar, rejeitar, gerenciar.
+- Site estático sem cookie não essencial **não precisa de banner**. Banner sem motivo é fricção à toa.
+- Link de WhatsApp (`wa.me`): o clique não aparece no Analytics sozinho. Evento `whatsapp_click` no clique (ou tag de clique no GTM) marcado como conversão; mensagem pré-preenchida (`?text=`) dizendo de que página veio.
+
+## 9 · Dependências
 
 - Pacote no `package.json` que ninguém importa.
 - Dependência sem release há anos numa área que muda (auth, pagamento, upload).

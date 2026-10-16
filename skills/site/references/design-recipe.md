@@ -167,9 +167,64 @@ estático sem Tailwind, traduzir pros valores CSS equivalentes.)
   20+ tiny glyphs). Never mix the two sets in one visual zone. No hand-rolled
   decorative SVG illustrations.
 
-## 9. Complementos no arsenal local
+## 9. Complementos
 
-Pra situações específicas, skills locais complementam sem substituir esta recipe:
-`taste` (variantes brutalist/minimalist/soft + dials) · `impeccable` (auditoria
-UX/acessibilidade) · `frontend-design` (base). Quando esta recipe e qualquer
-outro guia discordarem, a recipe vence.
+Skills de UI instaladas na máquina (por exemplo `impeccable`, para auditoria de
+UX e acessibilidade de um componente) complementam sem substituir esta recipe.
+Quando esta recipe e qualquer outro guia discordarem, a recipe vence.
+
+## 10. Responsivo, acessível e rápido (o piso de 2026)
+
+Cada regra abaixo tem fonte primária (WCAG 2.2, web.dev, MDN, NN/g, Baymard,
+ANPD) e é checada pelo `scripts/screenshot.js` ou pelo gate §A da rubrica.
+
+- **Larguras.** O piso legal é **320px** sem scroll horizontal (WCAG 1.4.10,
+  reflow). No Brasil, Android de 360-384px pesa mais que o iPhone de 390; capturar
+  390 não basta. `screenshot.js` mede 1440, 390, 360 e 320 por padrão.
+- **Hero em `svh`/`dvh`**, nunca `100vh`: a barra do navegador móvel some e o
+  hero pula. Container queries (`@container`, unidades `cqi`) são Baseline desde
+  2023 e são o jeito certo de adaptar um componente ao espaço, não à tela.
+- **Tipografia fluida com `clamp()`**, corpo com **50-75 caracteres por linha**
+  (Baymard). `text-wrap: balance` em títulos e `pretty` em parágrafos degradam
+  sem risco.
+- **Alvo de toque 24×24px no mínimo** (WCAG 2.5.8), 44px como mira no mobile.
+  Link dentro de frase fica de fora da regra.
+- **Foco visível e não coberto.** `outline: none` só com `:focus-visible`
+  substituto. Header fixo ou sticky exige `scroll-padding-top` da altura dele,
+  senão o foco e as âncoras caem embaixo (WCAG 2.4.11). Sem `tabindex` positivo.
+- **Landmarks e atalho:** um `<main>`, `<nav>` com `aria-label` quando há mais de
+  uma, primeiro link focável pulando pro conteúdo.
+- **Contraste** 4,5:1 texto, 3:1 texto grande e componentes (WCAG 1.4.3 e
+  1.4.11). É a régua legal; APCA não é requisito normativo, não cite como
+  tal. Botão fantasma sobre foto precisa de véu.
+- **Formulário:** label visível acima do campo, nunca placeholder como label
+  (NN/g); `autocomplete` em todo campo de identidade (WCAG 1.3.5); `type` e
+  `inputmode` certos (`email`, `tel`); erro ligado por `aria-describedby` +
+  `aria-invalid`; botão diz o que faz; confirmação só depois de o envio dar certo.
+- **Navegação mobile:** 2-4 itens visíveis mais "mais" supera hambúrguer puro
+  (NN/g, 179 participantes: navegação escondida derruba descoberta em mais de
+  20%). Sticky header pequeno, opaco o bastante para ter contraste, sem seguir
+  o scroll com atraso.
+- **Nada roda sozinho:** carrossel não auto-avança (NN/g: a maior oferta ficou
+  visível 20% do tempo); vídeo autoplay é mudo, `playsinline`, com pausa (WCAG
+  2.2.2); nenhum overlay de página inteira na entrada (o Google rebaixa desde
+  2017; texto da doc atualizado em dez/2025).
+- **Cookie e consentimento (Brasil, ANPD 2022):** site estático sem cookie não
+  essencial **não precisa de banner**. Com GA4, Pixel ou Clarity, o consentimento
+  vem antes da tag: Consent Mode com `analytics_storage: 'denied'` por padrão, e
+  o banner tem "aceitar", "rejeitar" e "gerenciar" com o mesmo destaque.
+- **Performance que o HTML decide:** a imagem do hero (LCP) leva
+  `fetchpriority="high"`, `decoding="async"`, dimensões explícitas e nunca
+  `loading="lazy"`; só uma por página. Abaixo da dobra, lazy. `<picture>` com
+  AVIF/WebP. Fonte do hero com `<link rel="preload" as="font" crossorigin>` (só
+  ela; o Lighthouse parou de recomendar preload de todas) e fallback local
+  com `size-adjust`/`ascent-override` para zerar o CLS de troca de fonte.
+  `content-visibility: auto` com `contain-intrinsic-size` em seções longas.
+  Scripts com `defer`. Metas vigentes: LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,1.
+- **INP com GSAP, Lenis e canvas:** INP mede clique e tecla, não scroll. O risco é
+  o rAF do scrub atrasar a resposta de um clique no menu. Listeners `passive`,
+  nada pesado no handler de clique, frames pré-decodificados.
+- **Reduced motion e cor:** `prefers-reduced-motion` recebe o estado final
+  estático (e o `screenshot.js` confere que nada ficou invisível); borda de foco
+  e de botão não podem depender só de `box-shadow`, que some em
+  `forced-colors`. Dark mode é opção, não padrão de leitura longa (NN/g).

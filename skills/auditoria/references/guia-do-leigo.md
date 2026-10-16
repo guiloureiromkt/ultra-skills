@@ -43,9 +43,10 @@ O código vai numa **variável de ambiente** (`NEXT_PUBLIC_GA_ID`), não cravado
 2. No Analytics, o relatório **Tempo real** deve mostrar 1 visitante quando a pessoa abrir o site no celular dela.
 3. Rode o `audit.mjs` de novo: `analytics.installed` tem que virar ✅.
 
-**Os dois erros que quase todo mundo comete:**
+**Os três erros que quase todo mundo comete:**
 - **Instalar duas vezes** (pelo plugin *e* pelo tema, ou pelo Tag Manager *e* direto). Toda visita conta em dobro e o relatório mente pra cima. O `audit.mjs` pega isso.
 - **Deixar de fora as páginas que não passam pelo layout principal** (landing avulsa, página de obrigado). São justamente as que mais importam medir.
+- **Carregar a tag antes de a pessoa aceitar cookies.** O Analytics grava um cookie, e no Brasil a ANPD orienta que cookie não essencial só entre depois do aceite. O jeito que não perde dado chama-se Consent Mode: duas linhas antes da tag dizendo "ainda sem consentimento", e o banner libera depois do clique. O `audit.mjs` avisa quando a tag carrega sem isso. Site sem cookie não essencial (sem Analytics, sem Pixel) não precisa de banner nenhum.
 
 ---
 
@@ -64,7 +65,7 @@ O código vai numa **variável de ambiente** (`NEXT_PUBLIC_GA_ID`), não cravado
 
 **O que olhar depois** (e quando):
 - **Espere de 2 a 3 dias** pra ter dado. No primeiro dia está vazio, e isso é normal — avise antes, senão a pessoa acha que deu errado.
-- **Desempenho** — o que as pessoas digitaram pra chegar. É a lista de assuntos que o site já responde: o melhor mapa de conteúdo que existe, e é de graça.
+- **Desempenho** — o que as pessoas digitaram pra chegar. É a lista de assuntos que o site já responde: o melhor mapa de conteúdo que existe, e é de graça. Desde 2025 os cliques vindos do AI Mode do Google entram somados aqui (não dá pra separar).
 - **Páginas** — quais foram indexadas e quais não. Se uma página importante está em "não indexada", o motivo aparece ali.
 - Um detalhe que confunde todo mundo: o painel de Sitemaps mostra "páginas indexadas: 0" mesmo quando estão indexadas. É um campo antigo que o Google não atualiza mais. **Confira em *Páginas*, não ali.**
 
@@ -101,8 +102,9 @@ O código vai numa **variável de ambiente** (`NEXT_PUBLIC_GA_ID`), não cravado
 Em ordem de retorno pelo esforço. **Não ofereça tudo junto** — proponha o próximo só quando o anterior estiver verificado.
 
 1. **Google Business Profile** (se o negócio atende em algum lugar físico ou região). Grátis, e é o que faz aparecer no Maps e no bloco lateral da busca. Para negócio local, costuma render mais que o site inteiro.
-2. **`llms.txt`** — o resumo que você entrega pronto pras IAs. Barato de fazer, e ainda pouca gente tem (ver `regua-geo.md` item 10).
-3. **Bing Webmaster Tools** — grátis, aceita importar direto do Search Console, e o índice do Bing é o que alimenta o ChatGPT. Cinco minutos com efeito direto em GEO.
+2. **`llms.txt`** — um resumo do site em texto, pra agentes de IA que o usuário aponta pro seu endereço. O Google diz que ignora e nenhum buscador de IA declara ler; não é o que faz a IA citar você. Custa dez minutos, e tem que estar certo: é o arquivo onde mais sobrevive texto de outra empresa (ver `cicatrizes-de-molde.md`).
+3. **Bing Webmaster Tools** — grátis, aceita importar direto do Search Console, e o índice do Bing é o que alimenta o ChatGPT e o Copilot. Cinco minutos. Desde fevereiro de 2026 tem o relatório **AI Performance**: quantas vezes o Copilot citou cada página. É a única medição oficial e gratuita de citação por IA que existe hoje.
+5. **Botão do WhatsApp medido.** Se o contato principal é o WhatsApp, o clique no link `wa.me` não aparece no Analytics sozinho. Precisa de um evento no clique (quem instala sabe fazer: `whatsapp_click`, marcado como conversão). Sem isso, o lead que mais chega é o que não se vê.
 4. **Uma página de "obrigado"** depois do envio do formulário, com endereço próprio. Sem ela não dá pra medir quantos formulários foram enviados de verdade — só quantos foram vistos.
 
 ---

@@ -1,75 +1,107 @@
 # Régua GEO — ser citado por IA (Fase 2)
 
-GEO = **Generative Engine Optimization**. Traduzindo: SEO otimiza pra aparecer numa *lista de links*; GEO otimiza pra aparecer *dentro da resposta* que o ChatGPT, o Perplexity, o Gemini ou o AI Overview do Google escreve. São problemas diferentes e a diferença importa: hoje a maioria das buscas termina sem clique nenhum, então estar na resposta virou o lugar que antes era o primeiro resultado.
+GEO = **Generative Engine Optimization**. SEO otimiza para aparecer numa lista de links; GEO otimiza para aparecer *dentro da resposta* que o ChatGPT, o Perplexity, o Gemini, o Claude, o Copilot ou o AI Mode do Google escrevem. São problemas parecidos com alavancas diferentes, e boa parte do que se vendia como "técnica de GEO" em 2024 não sobreviveu aos testes controlados de 2026.
 
-> **Nota de honestidade sobre os números abaixo.** Todos vêm do GEO-bench (Princeton, ago/2024) e do corpus Growth & Performance, compilados na régua de citabilidade que uso na minha operação. São de 2024-2026 e a área muda rápido. **Cite-os com a fonte e a data.** Não invente número novo. Onde não houver dado, o achado é qualitativo — e é dito como qualitativo.
-
----
-
-## As 5 dimensões (com peso)
-
-O `audit.mjs` pontua a parte mecânica. Esta tabela é como você **lê** o eixo GEO e explica pro dono do site onde ele está perdendo.
-
-| Dimensão | Peso | O que se olha |
-|---|---:|---|
-| **Citabilidade** | 25% | Frase-tese arrancável do contexto · resposta nas primeiras 40-80 palavras · passagens de 130-170 palavras que se sustentam sozinhas · construções "X é…" · dado que só essa marca tem |
-| **Estrutura** | 20% | H1→H2→H3 sem pulo · H2 em forma de pergunta literal · parágrafo curto · tabela/lista onde é comparativo · FAQ |
-| **Multi-modal** | 15% | Texto + imagem com legenda descritiva · vídeo · gráfico · elemento interativo (dá mais superfície pra IA entender o assunto) |
-| **Autoridade / Marca** | 20% | Assinatura com credencial · data de publicação e de atualização · fonte primária nomeada · schema `Person` com `sameAs` · menções em terceiros (LinkedIn, Reddit, YouTube, imprensa) |
-| **Técnico** | 20% | O conteúdo existe no HTML servido (crawler não roda JavaScript) · `FAQPage` idêntico à FAQ visível · schema completo e válido · `llms.txt` · robots liberando os crawlers de IA |
+> **Honestidade sobre os números.** Cada número abaixo tem fonte e data. Correlação (estudo de vendor sobre citações reais) e causa (experimento controlado) estão marcadas como tal. Cite com a fonte. Onde não houver dado, o achado é qualitativo e é dito como qualitativo. A área muda rápido: número com mais de 18 meses merece reconferir.
 
 ---
 
-## A régua de citabilidade — os 10 itens, em toda página que importa
+## O que a evidência diz (2025-2026)
 
-1. **BLUF nos primeiros 30%.** *(BLUF = Bottom Line Up Front: a conclusão primeiro, o desenvolvimento depois.)* Resposta direta em 50-70 palavras, com o termo central em **negrito** já na primeira frase. **44,2% das citações de IA saem dos primeiros 30% do texto** — o topo não é aquecimento, é o produto.
-2. **H2/H3 são perguntas literais** — as mesmas que a pessoa digita ("Quanto custa uma recuperação judicial?"), com a resposta direta no primeiro parágrafo abaixo.
-   - **O título obedece à mesma regra:** é a **dor que a pessoa busca**, não o jargão da solução. ❌ "MMM bayesiano e atribuição incremental" (ninguém pesquisa isso) → ✅ "Por que as conversões do Meta não batem com as suas vendas". O jargão fica **no corpo**, onde vira evidência citável; no título ele mata o clique.
-3. **Uma frase-tese citável por seção.** Curta, declarativa, atribuível, que continua fazendo sentido sozinha ("X custa Y porque Z"). É a unidade que o modelo levanta inteira.
-4. **Densidade de evidência — a maior alavanca.** Cada afirmação forte carrega **nome próprio + número + fonte/data**. Dado documental deu **+115% de visibilidade citacional** no GEO-bench, e vale até pra página sem autoridade nenhuma: **evidência supera domain authority.** É a melhor notícia que um site novo pode receber.
-5. **Information gain — o que só você tem.** Pelo menos um dado de primeira mão por página: "na minha operação…", "testei X e deu Y", um print, um número que não existe em outro lugar. O contrário é medido e é ruim: conteúdo genérico/programático perde **10% a 26% de probabilidade de citação**. Sameness não é neutro — ele *derruba*.
-6. **Dado em formato de dado.** Onde for comparativo ou enumerável, use tabela ou lista. A IA reconhece como dado estruturado (+30-40% de chance de citação), não como prosa a resumir.
-7. **Schema completo.** `Article`/`BlogPosting` + `FAQPage` (Q&A literal) + `Person` com `sameAs` (LinkedIn, site, redes) + `author` ligado ao Person. E o **tipo específico do negócio**: `LegalService`, `Dentist`, `LocalBusiness`, `SoftwareApplication`. Só `Organization` diz que a empresa existe; não diz o que ela faz.
-8. **O `FAQPage` bate com a FAQ visível, pergunta por pergunta.** Divergir é sinal negativo pro Google — ele lê os dois. (O `audit.mjs` checa isso automaticamente e marca como P0.)
-9. **Zero anti-padrão.** Sem repetição de keyword, sem parágrafo genérico sem evidência, sem enchimento. Cada frase ensina ou sai.
-10. **`llms.txt` na raiz.** O mapa que você entrega pronto: quem é a marca, o que vende, onde está cada coisa. Adoção ainda baixa — o que o torna barato e diferenciador. **E é onde o texto do molde mais sobrevive** (ver `cicatrizes-de-molde.md`): o resumo do `llms.txt` é literalmente o primeiro parágrafo que a IA lê sobre a marca.
+**O que decide a citação, antes de tudo, é ser recuperado e ser relevante para a pergunta.** Um levantamento crítico de 2023-2026 (arXiv 2607.14035, jul/2026) e um estudo fatorial com 252 mil tentativas (SIGIR 2026) chegam ao mesmo lugar: relevância tópica e posição no contexto determinam a primeira citação; formatação sozinha tem efeito fraco. Pior: reescrever o corpo "para a IA" **reduziu** presença no top-20 em 9% e citação final em 6% numa arena de 171 mil documentos. Otimizar a superfície sem ter o conteúdo certo prejudica.
+
+O que ajuda, com medida:
+
+| Alavanca | Efeito medido | Tipo | Fonte |
+|---|---|---|---|
+| Resumo ou resposta clara no início | +32,8% de chance de citação | correlação (11.882 prompts, 304 mil URLs) | Semrush, jan/2026 |
+| Sinais de autoria (credenciais, bio com link) | +30,6% | correlação | Semrush, jan/2026 |
+| Formato pergunta-resposta | +25,5% | correlação | Semrush, jan/2026 |
+| Estrutura por seção (H2/H3 claros) | +22,9% | correlação | Semrush, jan/2026 |
+| Tom promocional | **−26,2%** | correlação | Semrush, jan/2026 |
+| Hierarquia de headings + trechos de 150-300 palavras + listas/tabelas | +17,3% de citação (45,0% → 52,8%) em 200 artigos × 6 engines; trechos >300 palavras perdem atenção no meio (−31%), <150 citam menos (−23%) | experimento | arXiv 2603.29979, mar/2026 |
+| Estatística e citação com fonte | moderado a forte, **só se verídica** | experimento | survey 2607.14035 |
+| Data e preço recentes | moderado, em perguntas sensíveis a tempo | experimento | survey 2607.14035 |
+| Conteúdo atualizado | 72% das páginas citadas foram atualizadas no último ano, contra 42% publicadas no último ano: frescor vem de manutenção | correlação (7.683 páginas, mar-jun/2026) | Seer Interactive, jul/2026 |
+| Ranking orgânico no Google | de 76% (2025) para 38% (2026) das citações do AI Overview vêm do top-10 orgânico | correlação | Ahrefs, 2025 e 2026 |
+
+O que **não** se sustenta como fator: schema e autoridade de domínio nunca foram isolados num experimento (os estudos de vendor mostram presença de schema nas páginas citadas, não efeito); "tom autoritativo" é instável; menções em terceiros só aparecem em dado observacional.
+
+---
+
+## A régua de citabilidade (o que olhar em cada página que importa)
+
+1. **Resposta direta no primeiro bloco.** 50-70 palavras que respondem a pergunta da página, antes de qualquer contexto. O Bing escreve isso nas diretrizes de 2026 ("o essencial no topo"); a Semrush mede o efeito. O topo não é aquecimento, é o produto.
+2. **H2/H3 são as perguntas que a pessoa digita** ("Quanto custa uma recuperação judicial?"), com a resposta no primeiro parágrafo abaixo. **O título obedece à mesma regra:** a dor que a pessoa busca, não o jargão da solução. ❌ "MMM bayesiano e atribuição incremental" → ✅ "Por que as conversões do Meta não batem com as suas vendas". O jargão fica no corpo, onde vira evidência citável.
+3. **Uma frase-tese citável por seção.** Curta, declarativa, que continua fazendo sentido arrancada do contexto ("X custa Y porque Z"). É a unidade que o modelo levanta inteira.
+4. **Trechos de 150 a 300 palavras por seção.** Mais que isso o modelo perde o meio; menos que isso ele não cita.
+5. **Evidência com nome, número e fonte** em cada afirmação forte. Só vale se for verdade: número inventado com cara de real é o pior defeito possível, pior que não ter dado.
+6. **O que só você tem.** Pelo menos um dado de primeira mão por página: "na minha operação…", "testei X e deu Y", um print, um número que não existe em outro lugar. O Google chama o contrário de "commodity content" e diz, no guia de otimização para IA (2026), que ele perde.
+7. **Dado em formato de dado.** Comparação e enumeração em tabela ou lista (+43% de precisão de extração no experimento de 2026).
+8. **Autoria visível e ligada.** Byline com link para página do autor; schema `Person` com `url` e `sameAs`. O Google diz que perfil fabricado (foto de IA, credencial falsa) é sinal de baixa qualidade.
+9. **Data de atualização real.** `dateModified` no schema, data visível no texto, `lastmod` no sitemap, todos coerentes com a última mudança de conteúdo. Mudar a data sem mudar o texto é sinal negativo documentado pelo Google.
+10. **Sem tom promocional.** Cada frase ensina ou sai. "Líder", "solução completa", "o melhor" derrubam a citação.
+
+---
+
+## O que mudou no Google e você precisa saber ao reportar
+
+- **AI Overviews e AI Mode não têm requisito extra.** Página indexada e elegível a snippet entra; não existe schema, arquivo ou formato especial (Google, guia de IA, 2026). O que tira a página da resposta: `nosnippet` ou `max-snippet:0`.
+- **Rich results que acabaram:** FAQ (maio/2026), HowTo (2023), caixa de busca de sitelinks (nov/2024), breadcrumb só no desktop (2025). `FAQPage` continua schema válido, mas não rende nada visual; se o schema disser o que a página não diz, é spam. `WebSite` + `SearchAction` virou opcional.
+- **`lastmod` no sitemap** só é usado quando é verificavelmente correto. Sem data é melhor que data errada.
+- **`llms.txt`:** o Google diz que ignora (jun/2026). OpenAI, Anthropic e Perplexity publicam o arquivo nas próprias docs, mas nenhuma declara que o buscador lê o de terceiros. Serve a agentes de código e assistentes que o usuário aponta pro site. Vale ter, custa dez minutos, **não é fator de citação**, e é onde o texto do molde mais sobrevive (ver `cicatrizes-de-molde.md`). Tem que estar certo ou não estar.
+- **Preferred Sources e Search Profiles:** o leitor pode eleger o site como fonte preferida (documentado em jan/2026, em todas as línguas desde abr/2026, dentro dos AI Overviews e do AI Mode desde mai/2026, com botão oficial para o site desde ago/2026) e seguir o perfil do publisher (Search Profiles, jun/2026). Informativo; vale sugerir para quem publica com frequência.
+
+---
+
+## Crawlers de IA: treino × busca (o que o robots.txt faz de verdade)
+
+Bloquear o crawler **de busca** tira o site da resposta daquela IA. Bloquear o **de treino** é decisão de licenciamento e não mexe na citação. O `audit.mjs` separa os dois (`robots.ai` e `robots.ai.train`).
+
+| Função | Robôs | O que acontece se bloquear |
+|---|---|---|
+| **Busca / citação** | `OAI-SearchBot` (ChatGPT search) · `Claude-SearchBot` · `PerplexityBot` · `Bingbot` (Bing e Copilot) · `Googlebot` (Search, AI Overviews, AI Mode, Discover) · `Amzn-SearchBot` | a IA não encontra nem cita (P0) |
+| **Treino** | `GPTBot` · `ClaudeBot` · `Google-Extended` (Gemini; não afeta Search nem AI Overviews) · `CCBot` · `Applebot-Extended` · `Meta-ExternalAgent` · `Amazonbot` · `Bytespider` | nada na citação; só no dataset (informativo) |
+| **Busca a pedido do usuário** | `ChatGPT-User` · `Claude-User` · `Perplexity-User` · `Meta-ExternalFetcher` | `Claude-User` respeita robots.txt; `Perplexity-User` e `Meta-ExternalFetcher` **ignoram** por design e a OpenAI diz que as regras "podem não se aplicar" ao `ChatGPT-User`; só firewall segura esses |
+
+Fontes: documentação de crawlers da OpenAI, da Anthropic (abr/2026), da Perplexity, do Google (out/2026), da Apple (set/2026), da Meta e da Amazon. `Content-Signal` (Cloudflare, 2025) e o rascunho `aipref` da IETF são sintaxe que nenhuma IA grande se comprometeu a honrar até out/2026: não pontuam, só se checa que não quebram o arquivo.
+
+**Nenhum crawler de IA grande executa JavaScript** (Vercel mediu em 2024; nenhuma das três documenta renderização). Conteúdo que só existe depois do JS não existe para o ChatGPT nem para o Perplexity. O Google renderiza. Teste: `curl -s <url> | sed 's/<[^>]*>/ /g'` e procure o texto principal.
+
+---
+
+## Por plataforma (o overlap entre elas é pequeno; é mais de uma otimização)
+
+- **ChatGPT** cita poucas fontes por resposta (média 3,4 contra 12,6 do Google e 17,7 do Perplexity em tarefas com várias restrições, arXiv 2604.25707) e pesa cada uma; em mais da metade das repetições nem aciona busca. Puxa do índice do Bing e de menção de marca. Alavanca: Bing Webmaster Tools (importa do Search Console em 5 minutos) e presença em terceiros que ele já cita (Wikipedia é 7,8% das citações, Profound 2025).
+- **Perplexity** favorece frescor e comunidade (Reddit é 6,6% das citações). Alavanca: publicação recorrente, datada, com feed.
+- **Google AI Overviews / AI Mode** herdam o índice do Googlebot e cada vez menos o ranking orgânico (38% do top-10 em 2026). O AI Mode cita cada vez mais o próprio Google (cards de Business Profile e produto). Alavanca: o que já é bom SEO, mais Business Profile e Merchant Center onde couber.
+- **Copilot / Bing**: diretrizes de fev/2026 pedem fato direto, nome de entidade consistente, um tópico por URL, essencial no topo. `NOARCHIVE` tira do Copilot; `nosnippet` rebaixa a citação.
+- **Claude** favorece profundidade editorial. Alavanca: as peças longas e bem estruturadas, em trechos de 150-300 palavras.
 
 ---
 
 ## Consistência de entidade (o que amarra tudo)
 
-A IA consolida "quem é essa marca" cruzando fontes. Divergência quebra a consolidação e é a falha mais silenciosa que existe — nada aparece errado na tela.
-
-Confira que **o mesmo nome, a mesma URL e o mesmo tipo** aparecem em: `<title>` e H1 · schema `Organization`/`LegalService`.`url` · `og:url` e canonical · `llms.txt` · perfis externos (LinkedIn, Google Business, diretórios do setor).
-
-Erro clássico e fácil de achar: o site serve em `www.dominio.com` mas o schema e o `llms.txt` apontam pro `dominio.com` sem www. São dois endereços diferentes pra máquina.
+A IA consolida "quem é essa marca" cruzando fontes. Divergência quebra a consolidação sem nada aparecer errado na tela. O mesmo nome, a mesma URL e o mesmo tipo em: `<title>` e H1 · `Organization` (com `url`, `logo`, `sameAs`, endereço e CNPJ quando fizer sentido) ou o tipo específico (`LegalService`, `Dentist`, `LocalBusiness`…) · `og:url` e canonical · `llms.txt` · Google Business Profile · LinkedIn e diretórios do setor. Erro clássico: o site serve em `www.dominio.com` e o schema aponta para `dominio.com`.
 
 ---
 
-## Por plataforma (o overlap entre elas é de só 11-14% — não é uma otimização só)
+## Verificação com dado real (quando houver ferramenta)
 
-- **ChatGPT** — puxa autoridade do índice do Bing e de menções de marca. Alavanca: presença forte no LinkedIn + ser citado por terceiros.
-- **Perplexity** — favorece frescor e conteúdo de comunidade (Reddit incluso). Alavanca: publicação recorrente e datada.
-- **Claude** — favorece profundidade editorial. Alavanca: as peças longas e bem estruturadas.
-- **AI Overviews (Google)** — herda os sinais clássicos de SEO. Alavanca: o que já é bom SEO, feito direito.
+Tudo acima é inferência: sinais que correlacionam com chance de citação. Ninguém aqui testou se a IA cita o site *hoje*. Quando houver acesso a medição real, ela vira a régua, e o inferido só explica o resultado:
+
+- **Bing Webmaster Tools → AI Performance** (fev/2026): citações e cliques vindos do Copilot, por página. Grátis.
+- **Search Console** soma o AI Mode nos totais desde jun/2025 (não separa).
+- Ferramentas de share of model ou um MCP de SERP que rodem prompts reais contra ChatGPT, Perplexity, Gemini e AI Overviews.
+
+Regras de honestidade iguais às de `como-nao-reportar-mentira.md`: motor que falhou é "não medido", nunca "não aparece" · sem base de comparação não existe share of voice (0 em 5 consultas é ausência observada, não ausência) · tamanho da amostra e confiança vão junto com o número.
 
 ---
 
-## Verificação com dado real (opcional)
+## O que só o humano ou o modelo julga (não automatize)
 
-Tudo acima é **inferência**: sinais on-page que correlacionam com chance de citação, mas ninguém aqui testou se a IA cita o site *hoje*. Quando há acesso a uma ferramenta que testa prompts reais contra ChatGPT/Perplexity/Gemini/AI Overviews (um motor de share-of-voice/share-of-model, ou um MCP de SERP), ela vira a régua de verdade — o inferido só serve pra explicar o resultado real, nunca pra substituí-lo.
-
-Regras de honestidade pra quem tiver essa ferramenta (mesmo padrão de `como-nao-reportar-mentira.md`, aplicado a medição):
-- **Motor que falhou é "não medido"**, nunca "não aparece". Um erro de credencial ou timeout não é a marca perdendo citação — é a ferramenta não ter respondido. Confundir os dois é o pior tipo de achado falso, porque prescreve tratamento pro problema errado.
-- **Sem base de comparação, não existe share-of-voice.** Se nem a marca nem os concorrentes apareceram numa amostra pequena, o resultado é "indefinido", não "zero" — 0 citações em 5 consultas não prova ausência, só ausência *observada*.
-- **Reportar o tamanho da amostra e a confiança junto com o número.** "0/30 respostas" é informação; "não aparece" sem o denominador não é.
-
-## O que **só** o humano ou o modelo julga (não automatize isto)
-
-O script mede forma. Estes cinco exigem leitura:
-
-1. A frase-tese é de fato citável, ou é uma frase bonita e vazia?
-2. A evidência é real e verificável, ou é número com cara de real e sem fonte? *(Este é o pior defeito possível — pior que não ter dado nenhum.)*
-3. O dado de primeira mão é genuíno, ou é a média da internet parafraseada?
-4. O título casa com a busca real de alguém com aquela dor?
-5. A promessa da página é sustentada pelo conteúdo, ou o site promete o que não entrega?
+1. A frase-tese é de fato citável, ou é bonita e vazia?
+2. A evidência é real e verificável, ou número com cara de real?
+3. O dado de primeira mão é genuíno, ou a média da internet parafraseada?
+4. O título casa com a busca de alguém com aquela dor?
+5. A promessa da página é sustentada pelo conteúdo?
