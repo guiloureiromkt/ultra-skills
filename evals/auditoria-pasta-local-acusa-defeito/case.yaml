@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: auditoria-pasta-local-acusa-defeito
+description: Pasta estática local com defeitos plantados. O auditor mecânico tem que acusá-los no AUDITORIA.md.
+tags: [auditoria, fixture]
+context:
+  scaffold_script: fixture.sh

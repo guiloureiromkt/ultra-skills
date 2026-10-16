@@ -22,3 +22,7 @@ package-lock.json
 Thumbs.db
 __pycache__/
 *.pyc
+
+# resultados de eval (cada rodada gera; não versionar)
+evals/results/
+evals/**/results/
