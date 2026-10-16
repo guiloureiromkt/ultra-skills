@@ -58,7 +58,7 @@ Se quiser, dá pra emendar tudo numa mensagem só:
 
 **Duas coisas que valem saber:**
 
-- **O teste (`smoke.mjs`) não é frescura.** Ele monta um site de mentira cheio de defeitos, audita e confere 27 coisas. Tem que dar **`27/27 · OK`**. Auditor quebrado não dá erro — ele dá **conforto falso**: diz que está tudo bem e você acredita. Cinco segundos ali valem mais que a auditoria inteira.
+- **O teste (`smoke.mjs`) não é frescura.** Ele monta um site de mentira cheio de defeitos, audita e confere dezenas de propriedades (51 na versão atual). Tem que terminar em **`OK`**. Auditor quebrado não dá erro — ele dá **conforto falso**: diz que está tudo bem e você acredita. Cinco segundos ali valem mais que a auditoria inteira.
 - **A skill fica registrada de verdade na próxima vez que você abrir o Claude Code.** Na sessão em que você instalou, ele já consegue usar (lendo os arquivos direto), então não precisa parar nada no meio.
 
 <details>
@@ -89,7 +89,7 @@ A skill assume dali: faz as perguntas que faltam (uma rodada só), roda o audito
 ### O jeito completo: o comando na mão
 
 ```
-node scripts/audit.mjs --url https://www.meusite.com.br --brand "Nome Exato da Marca" --sector "o que voce faz" --repo C:/caminho/do/codigo --out ./auditoria/rodada-1 --round 1
+node scripts/audit.mjs --url https://www.meusite.com.br --brand "Nome Exato da Marca" --sector "o que voce faz" --repo ./caminho/do/codigo --out ./auditoria/rodada-1 --round 1
 ```
 
 O que cada pedaço faz:

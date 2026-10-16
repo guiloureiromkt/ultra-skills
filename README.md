@@ -1,6 +1,6 @@
 # Ultra Skills — as ferramentas que eu uso, abertas e em português
 
-**Cinco skills de [Claude Code](https://claude.com/claude-code). Duas trabalham em par para sites: a `ultra:site` constrói decidindo o design como imagem antes de escrever uma linha de código, e a `ultra:auditoria` mede se o Google entende, se a IA cita, se o Analytics está instalado e se o formulário realmente entrega o contato. As outras três resolvem escrita, presença no LinkedIn e diagnóstico de negócio.** Todas gratuitas, abertas, em português.
+**Sete skills de [Claude Code](https://claude.com/claude-code). Duas trabalham em par para sites: a `ultra:site` constrói decidindo o design como imagem antes de escrever uma linha de código, e a `ultra:auditoria` mede se o Google entende, se a IA cita, se o Analytics está instalado e se o formulário realmente entrega o contato. As outras três resolvem escrita, presença no LinkedIn e diagnóstico de negócio.** Todas gratuitas, abertas, em português.
 
 Elas existem porque eu precisei delas na minha própria operação. Não são demonstração.
 
@@ -24,7 +24,7 @@ Nenhuma auditoria de SEO pega isso. A `ultra:auditoria` pega, e classifica como 
 
 O jeito comum de fazer site com IA é descrever ("moderno, clean, sofisticado") e torcer. Sai template, porque adjetivo é a média de todos os sites que o modelo já viu.
 
-Aqui o caminho é outro: a skill **gera um quadro de referência visual por seção**, você olha, aprova ou manda refazer — e só então o código é escrito, fiel àquilo. Mais um ledger anti-convergência que impede o próximo site de ter a cara do anterior, paletas de IA banidas por código hexadecimal, e um review adversarial por screenshot antes de qualquer entrega.
+Aqui o caminho é outro: a skill **gera um quadro de referência visual por seção**, você olha, aprova ou manda refazer — e só então o código é escrito, fiel àquilo. Mais um ledger anti-convergência que impede o próximo site de ter a cara do anterior, paletas de IA banidas por código hexadecimal, e um review adversarial antes de qualquer entrega: screenshots em desktop e mobile mais um `checks.md` medido em navegador real (scroll horizontal a 320/360/390px, contraste, alvos de toque, foco coberto pelo header, blocos que somem com reduced-motion, CLS).
 
 > ⚠️ **Depende de conta paga no [Replicate](https://replicate.com)** — cerca de **US$ 5 a 15 por site**. Não existe modo grátis, e isso é deliberado: sem imagem gerada não há quadro de referência, e sem quadro sai exatamente o "limpo mas genérico" que a skill define como falha. O passo a passo completo está em [`skills/site/references/replicate-setup.md`](skills/site/references/replicate-setup.md), inclusive a parte honesta sobre **quando esta skill não é a ferramenta certa**.
 
@@ -36,10 +36,10 @@ Roda contra um site no ar, uma pasta local ou um repositório. **Zero dependênc
 |---|---|
 | SEO técnico | O Google consegue ler e entender o site? |
 | SEO de conteúdo | O conteúdo responde o que as pessoas procuram? |
-| GEO | ChatGPT, Perplexity e Gemini conseguem te citar? |
+| GEO | ChatGPT, Perplexity, Gemini/AI Mode e Copilot conseguem te citar? (crawler de busca liberado, nada de `nosnippet`, resposta no topo, autor com página, conteúdo mantido) |
 | Integridade de marca | O site fala de você, ou sobrou texto do template? |
-| Medição & conversão | Tem Analytics? O formulário entrega o contato ou finge? |
-| Código & qualidade | Segurança, acessibilidade, performance |
+| Medição & conversão | Tem Analytics, e ele espera o consentimento? O formulário entrega o contato ou finge? O clique no WhatsApp é medido? |
+| Código & qualidade | Segurança, acessibilidade (WCAG 2.2: landmark, foco, alvos, autocomplete), performance (imagem LCP, scripts, fontes) |
 
 Cada achado sai com **a evidência colada** — a linha real do seu HTML, o trecho do texto no ar, o caminho do arquivo. Achado sem evidência não entra, porque vira ruído que ninguém consegue conferir.
 
@@ -104,13 +104,23 @@ Renomeie com o prefixo ao copiar (`ultra-site`, `ultra-humanizer`…) — sem o 
 cd skills/auditoria && node scripts/smoke.mjs
 ```
 
-Ele monta um site de mentira cheio de defeitos conhecidos, audita e confere **27 propriedades** — metade "acusou o que tem defeito", metade "não acusou o que está certo", mais a que mais importa: **um site correto atinge a nota de aprovação**. Se isso não fosse verdade, o loop de correção nunca terminaria em sucesso e ninguém perceberia.
+Ele monta um site de mentira cheio de defeitos conhecidos, audita e confere **dezenas de propriedades** (51 hoje) — metade "acusou o que tem defeito", metade "não acusou o que está certo", mais a que mais importa: **um site correto atinge a nota de aprovação**. Se isso não fosse verdade, o loop de correção nunca terminaria em sucesso e ninguém perceberia.
 
-Tem que dar `27/27 · OK`.
+Tem que terminar em `OK`.
 
 > **Por quê?** Auditor quebrado não dá erro. Ele dá **conforto falso**: diz que está tudo bem e você acredita. Cinco segundos ali valem mais que a auditoria inteira. Foi esse teste, aliás, que encontrou dois falsos positivos meus — campo oculto sendo cobrado por rótulo de acessibilidade, e comparação de domínio contra valor nulo.
 
 ---
+
+## Provar que as skills continuam fazendo o que dizem
+
+Além do smoke do auditor, o repositório traz uma suíte de eval do próprio Claude Code (`evals/`): quatro casos que rodam a skill de verdade e conferem o resultado. Um pedido de auditoria por URL tem que disparar a `ultra:auditoria` e rodar o `smoke.mjs` antes do `audit.mjs`; um pedido de site premium sem token do Replicate tem que disparar a `ultra:site` e conduzir a configuração sem pedir o token no chat; um pedido de post de LinkedIn não pode disparar nenhuma das duas; e uma pasta estática com defeitos plantados (texto de outra marca, `max-snippet:0`, crawler de busca de IA bloqueado) tem que sair acusada no `AUDITORIA.md`.
+
+```bash
+claude plugin eval . --scaffold --allow-tools Bash Write --runs 1 --ablation none --no-publish --max-cost-usd 3
+```
+
+Cada caso é um `prompt.md` mais graders em `evals/<caso>/graders/`. `--scaffold` monta o fixture do quarto caso; `--ablation with-without` (o padrão) roda também sem o plugin e mostra a diferença. Resultados ficam em `evals/results/`, fora do git.
 
 ## Quem fez isso, e por quê
 
