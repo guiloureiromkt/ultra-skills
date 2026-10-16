@@ -106,7 +106,10 @@ def main():
         import truststore; truststore.inject_into_ssl()  # Windows AVG-SSL
     except Exception:
         pass
-    import requests
+    try:
+        import requests
+    except ImportError:
+        sys.exit("Falta o pacote 'requests'. Rode uma vez:  pip install requests")
     tok = load_token()
     H = {"Authorization": f"Bearer {tok}", "Content-Type": "application/json", "Prefer": "wait"}
 
