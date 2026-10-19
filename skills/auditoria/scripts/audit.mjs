@@ -382,7 +382,7 @@ function auditPage(pageUrl, html, headers, ctx) {
 
   // Open Graph / Twitter
   const og = (prop) => attr((metas.find((m) => (attr(m.attrs, "property") || attr(m.attrs, "name") || "").toLowerCase() === prop) || {}).attrs || "", "content");
-  p.og = { title: og("og:title"), description: og("og:description"), image: og("og:image"), url: og("og:url"), type: og("og:type") };
+  p.og = { title: og("og:title"), description: og("og:description"), image: og("og:image"), url: og("og:url"), type: og("og:type"), siteName: og("og:site_name") };
   for (const k of ["title", "description", "image"]) {
     if (!p.og[k]) add("P2", `Sem og:${k} — o link compartilhado sai sem cara`);
   }
@@ -453,6 +453,8 @@ function auditPage(pageUrl, html, headers, ctx) {
     if (missing.length) add("P1", `FAQPage declara ${missing.length} pergunta(s) que não existem no texto visível — o rich result de FAQ acabou em 2026, então o schema só serve se for coerente; schema que diz o que a página não diz é tratado como spam`, missing.slice(0, 2).join(" | "));
   }
 
+  p.entityNames = nodes.filter((n) => [].concat(n["@type"] || []).some((t) => t === "Organization" || t === "WebSite") && typeof n.name === "string").map((n) => n.name);
+
   // entidade: Organization genérico onde cabia tipo específico
   const orgNode = nodes.find((n) => [].concat(n["@type"] || []).includes("Organization"));
   if (orgNode) {
@@ -476,7 +478,12 @@ function auditPage(pageUrl, html, headers, ctx) {
   // "método:" termina em "todo:" e o \b nao ajuda, porque "e" acentuado nao e caractere de palavra.
   const PLACE = /(lorem ipsum|texto de exemplo|coloque aqui|seu texto aqui|inserir texto|\bx{6,}\b)/i;
   const PLACE_MARK = /(?:^|[^A-Za-zÀ-ÿ])(TODO:|FIXME\b)/;
-  const ph = text.match(PLACE) || text.match(PLACE_MARK);
+  // "TODO:" em CAIXA ALTA também é palavra comum em espanhol, galego e português ("Hacemos
+  // TODO: desde el embalaje"). Nessas páginas só o FIXME vale como marcador de rascunho;
+  // o TODO esquecido de verdade no código é pego pelo --repo (todo.left). (cicatriz F2)
+  const langBase = String(p.lang || "").toLowerCase().slice(0, 2);
+  const todoEhPalavra = ["es", "pt", "gl", "ca"].includes(langBase);
+  const ph = text.match(PLACE) || (todoEhPalavra ? text.match(/(?:^|[^A-Za-zÀ-ÿ])(FIXME\b)/) : text.match(PLACE_MARK));
   if (ph) add("P0", "Placeholder/lorem visível na página publicada", ph[0]);
 
   // seção com título e zero conteúdo (o "Cases" vazio do caso real)
@@ -513,29 +520,48 @@ function auditPage(pageUrl, html, headers, ctx) {
     .slice(0, 6);
 
   // ---- A5 · o feed declarado na página (checado no nível do site) ----------
-  p.feeds = links
-    .filter((l) => (attr(l.attrs, "rel") || "").toLowerCase() === "alternate" &&
-      /(rss|atom|xml)/i.test(attr(l.attrs, "type") || ""))
-    .map((l) => { try { return new URL(attr(l.attrs, "href"), pageUrl).toString(); } catch { return null; } })
-    .filter(Boolean);
+  // oEmbed (`application/json+oembed`, `text/xml+oembed`) é o endereço pelo qual OUTRO
+  // site incorpora esta página; casa com /xml/ mas não é feed nem sitemap. Vai pro
+  // seu próprio balde, com rótulo certo. (cicatriz F5)
+  const alternates = links.filter((l) => (attr(l.attrs, "rel") || "").toLowerCase() === "alternate");
+  const paraUrl = (l) => { try { return new URL(attr(l.attrs, "href"), pageUrl).toString(); } catch { return null; } };
+  const ehOembed = (l) => /oembed/i.test(attr(l.attrs, "type") || "");
+  p.feeds = alternates.filter((l) => !ehOembed(l) && /(rss|atom|xml)/i.test(attr(l.attrs, "type") || "")).map(paraUrl).filter(Boolean);
+  p.oembed = alternates.filter(ehOembed).map(paraUrl).filter(Boolean);
 
   // ---- A3 · imagem principal: guardar as candidatas pra medir depois -------
   // A medição é de rede (assíncrona) e acontece no nível do site; aqui só se
   // resolve QUAIS imagens importam pro card grande: a og:image e a do schema.
   p.mainImages = [];
-  const schemaImg = (() => {
-    for (const n of nodes) {
-      const im = n.image || n.thumbnailUrl;
-      if (!im) continue;
-      const v = Array.isArray(im) ? im[0] : im;
-      if (typeof v === "string") return v;
-      if (v && typeof v === "object" && typeof v.url === "string") return v.url;
+  // SÓ conta a imagem do Article/BlogPosting/NewsArticle, a primaryImageOfPage do
+  // WebPage e a og:image. `image` de Person (foto de autor, Gravatar de 96px),
+  // Organization (logo) e afins não é a imagem da página: pegar "a primeira image
+  // do grafo" acusou 96×96 como capa. (cicatriz F4) O Rank Math referencia por @id,
+  // então resolve a referência contra os nós do grafo.
+  const porId = new Map(nodes.filter((n) => n["@id"]).map((n) => [n["@id"], n]));
+  const urlDeImagem = (im, fundo = 0) => {
+    if (!im || fundo > 3) return null;
+    const v = Array.isArray(im) ? im[0] : im;
+    if (typeof v === "string") return porId.has(v) ? urlDeImagem(porId.get(v), fundo + 1) : v;
+    if (v && typeof v === "object") {
+      if (typeof v.url === "string") return v.url;
+      if (typeof v.contentUrl === "string") return v.contentUrl;
+      if (v["@id"] && porId.has(v["@id"]) && porId.get(v["@id"]) !== v) return urlDeImagem(porId.get(v["@id"]), fundo + 1);
     }
     return null;
-  })();
-  for (const [origem, src] of [["og:image", p.og.image], ["schema image", schemaImg]]) {
+  };
+  const TIPOS_ARTIGO = ["Article", "BlogPosting", "NewsArticle"];
+  const candidatas = [["og:image", p.og.image]];
+  const nodeArtigo = nodes.find((n) => [].concat(n["@type"] || []).some((t) => TIPOS_ARTIGO.includes(t)));
+  if (nodeArtigo) candidatas.push(["schema image", urlDeImagem(nodeArtigo.image || nodeArtigo.thumbnailUrl)]);
+  const nodePagina = nodes.find((n) => n.primaryImageOfPage);
+  if (nodePagina) candidatas.push(["primaryImageOfPage", urlDeImagem(nodePagina.primaryImageOfPage)]);
+  for (const [origem, src] of candidatas) {
     if (!src) continue;
-    try { p.mainImages.push({ origem, url: new URL(src, pageUrl).toString() }); } catch {}
+    try {
+      const url = new URL(src, pageUrl).toString();
+      if (!p.mainImages.some((m) => m.url === url)) p.mainImages.push({ origem, url });
+    } catch {}
   }
 
   // ---- A6 · VideoObject só quando o vídeo é assistível ---------------------
@@ -604,11 +630,23 @@ function auditPage(pageUrl, html, headers, ctx) {
     }
   }
   // Medição duplicada conta cada visita duas vezes — todo relatório fica mentindo.
+  // Conta INSTALADORES (o <script> que carrega a tag), nunca o texto do ID: o
+  // PixelYourSite escreve o ID do GTM no JSON de config de cada evento (12× por
+  // página) e o container carrega uma vez só. O <noscript> do GTM também fica de
+  // fora: é o par do snippet, não um segundo. (cicatriz F1: 582 páginas acusadas)
+  const instaladores = (id) => {
+    const e = escapeRe(id);
+    const padroes = /^GTM-/.test(id)
+      ? [`gtm\\.js\\?id=${e}`, `['"]script['"]\\s*,\\s*['"][^'"]+['"]\\s*,\\s*['"]${e}['"]\\s*\\)`]
+      : /^UA-/.test(id)
+        ? [`gtag/js\\?id=${e}`, `\\bga\\(\\s*['"]create['"]\\s*,\\s*['"]${e}['"]`]
+        : [`gtag/js\\?id=${e}`];
+    return padroes.reduce((n, src) => { const re = safeRe(src, "g"); return n + (re ? (H.match(re) || []).length : 0); }, 0);
+  };
   for (const a of p.analytics) {
     for (const id of a.ids) {
-      const reId = safeRe(escapeRe(id), "g");
-      const n = reId ? (H.match(reId) || []).length : 0;
-      if (n > 2) add("P1", `Código de medição ${id} aparece ${n}× na mesma página — visita contada em dobro deixa todo relatório errado pra cima`, id);
+      const n = instaladores(id);
+      if (n > 1) add("P1", `Código de medição ${id} instalado ${n}× na mesma página (${n} snippets que carregam a tag) — visita contada em dobro deixa todo relatório errado pra cima`, id);
     }
   }
   const gsv = metas.find((m) => (attr(m.attrs, "name") || "").toLowerCase() === "google-site-verification");
@@ -670,7 +708,13 @@ function auditPage(pageUrl, html, headers, ctx) {
   // o blog inteiro fora da auditoria sem ninguém perceber.
   const artNode = nodes.find((n) => [].concat(n["@type"] || []).some((t) => ["Article", "BlogPosting", "NewsArticle"].includes(t)));
   const urlLooksPost = /\/(blog|artigos?|posts?|noticias?|insights?|conteudos?)\/[^/]+\/?$/i.test(new URL(pageUrl, "https://x").pathname);
-  const isPost = !!artNode || urlLooksPost;
+  // Rank Math e Yoast põem `Article` em página de serviço. Schema Article sozinho não
+  // faz post: precisa de BlogPosting/NewsArticle, ou de Article com data de publicação
+  // ou og:type=article. (cicatriz F6: página de serviço cobrada por "data de publicação")
+  const tiposArt = artNode ? [].concat(artNode["@type"] || []) : [];
+  const artEhPost = !!artNode && (tiposArt.some((t) => t === "BlogPosting" || t === "NewsArticle")
+    || !!artNode.datePublished || (p.og.type || "").toLowerCase() === "article");
+  const isPost = artEhPost || urlLooksPost;
   if (isPost) {
     p.isPost = true;
     if (!artNode) add("P1", "Post de blog sem schema Article/BlogPosting — o buscador não sabe que isso é um artigo, com autor e data");
@@ -1088,6 +1132,20 @@ async function auditFeedsAndSitemaps(site, pages, ctx) {
     site.feedsChecked = checados.map(({ body, ...rest }) => rest);
   } else skip("seo_tecnico", "feeds.alive", "P1", "Nenhum sitemap ou feed declarado", "Nada a verificar.");
 
+  // oEmbed: amostra pequena, porque cada página repete os mesmos endereços e o
+  // efeito de um oEmbed fora do ar é só não aparecer o preview em quem incorpora o link.
+  const oembeds = [...new Set(pages.flatMap((p) => p.oembed || []))];
+  if (oembeds.length) {
+    const amostra = oembeds.slice(0, 5);
+    const resp = await pool(amostra, 4, async (u) => { const r = await fetchChain(u); return { url: u, status: r.status || null, error: r.error || null }; });
+    const fora = resp.filter((c) => c.status !== 200);
+    if (fora.length) {
+      bad("seo_tecnico", "oembed.alive", "P2", `${fora.length} de ${amostra.length} endereço(s) oEmbed da amostra não respondem 200`,
+        "O oEmbed é o endereço que outro site (Slack, Notion, WordPress) usa pra mostrar uma prévia quando alguém cola o link. Fora do ar, só a prévia some; não afeta Google nem busca de IA. NÃO é sitemap nem feed.",
+        fora.map((m) => `${m.url} → ${m.error || `HTTP ${m.status}`}`).join("\n"));
+    } else ok("seo_tecnico", "oembed.alive", "P2", `${amostra.length} endereço(s) oEmbed da amostra respondem 200`);
+  }
+
   // A5 · feed só é cobrado onde há conteúdo datado. Landing de uma página não
   // precisa de RSS, e sugerir isso queima a confiança no resto do relatório.
   const temPosts = pages.some((p) => p.isPost);
@@ -1257,7 +1315,7 @@ function writeReports(outDir, payload) {
   const L = [];
   L.push(`# Auditoria — ${meta.target}`);
   L.push("");
-  L.push(`> Rodada ${meta.round} · ${meta.timestamp} · ${pages.length} página(s) auditada(s).`);
+  L.push(`> Rodada ${meta.round} · ${meta.timestamp} · ${pages.filter((p) => !p.nonHtml).length} página(s) auditada(s).`);
   L.push("");
   L.push(`**Nota geral: ${scores.overall ?? "não medido"}/100** · P0 abertos: **${scores.p0Total}** · Gate (todos ≥90 e zero P0): ${scores.gate ? "✅ PASSOU" : "❌ NÃO PASSOU"}`);
   L.push("");
@@ -1328,12 +1386,20 @@ function writeReports(outDir, payload) {
       const r = await fetchChain(u);
       if (r.error) return { url: u, error: r.error, issues: [{ severity: "P0", msg: `Falha ao buscar: ${r.error}` }] };
       if (r.status !== 200) return { url: u, status: r.status, chain: r.chain, issues: [{ severity: r.status >= 400 ? "P0" : "P1", msg: `HTTP ${r.status}${r.chain.length > 1 ? ` após ${r.chain.length - 1} redirect(s)` : ""}` }] };
+      // Sitemap lista de tudo: `/locations.kml` do Rank Math, PDF, imagem. Auditar isso
+      // como página dá "sem title, sem H1, sem lang…" e ainda derruba a cobertura de
+      // medição pra N-1/N. Sem content-type, assume HTML. (cicatriz F3)
+      const ct = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      if (ct && !/^(text\/html|application\/xhtml\+xml)$/.test(ct)) return { url: r.url, status: 200, nonHtml: ct, issues: [] };
       const p = auditPage(r.url, r.body, r.headers, ctx);
       p.status = 200; p.redirects = r.chain.length - 1;
       if (p.redirects > 0) p.issues.push({ severity: "P2", msg: `URL do sitemap redireciona (${p.redirects} hop) — aponte o sitemap pra URL final` });
       return p;
     });
     pages = results;
+    const naoHtml = pages.filter((p) => p.nonHtml);
+    if (naoHtml.length) skip("seo_tecnico", "pages.nonhtml", "P2", `${naoHtml.length} URL(s) do sitemap não são HTML e ficaram fora da auditoria de página`,
+      `Respondem 200 mas com outro tipo de conteúdo (${[...new Set(naoHtml.map((p) => p.nonHtml))].join(", ")}). Title, H1, schema e medição não se aplicam a elas. Exemplos: ${naoHtml.slice(0, 3).map((p) => p.url).join(" · ")}`);
     auditRobots(site);
     auditSitemap(site, pages);
     auditLlmsTxt(site, pages, ctx);
@@ -1374,7 +1440,7 @@ function writeReports(outDir, payload) {
   }
 
   // --- agregações cross-página (só fazem sentido com o conjunto na mão) ---
-  const live = pages.filter((p) => p.status === 200 || p.file);
+  const live = pages.filter((p) => (p.status === 200 || p.file) && !p.nonHtml);
   if (live.length > 1) {
     const dupTitles = {}, dupDescs = {};
     for (const p of live) {
@@ -1394,6 +1460,43 @@ function writeReports(outDir, payload) {
     const orphans = live.filter((p) => p.url && !linkedTo.has(p.url.replace(/\/$/, "")) && !/\/(pt|en)?\/?$/.test(new URL(p.url, "https://x").pathname));
     if (orphans.length) bad("seo_tecnico", "orphans", "P1", `${orphans.length} página(s) sem link interno apontando pra ela`, "Página órfã recebe pouca autoridade e é rastreada por último.", orphans.slice(0, 5).map((p) => p.url).join(" · "));
     else ok("seo_tecnico", "orphans", "P1", "Nenhuma órfã entre as páginas auditadas");
+  }
+
+  // ---- F7 · a marca é nome próprio e não se traduz ---------------------------
+  // TranslatePress/WPML/Google Translate transformam "Ponte Leste" em
+  // "Puente Este" no og:site_name, no schema e no título da versão /es/.
+  // O eixo de marca só olhava se o nome EXISTIA no idioma principal. Aqui compara a
+  // versão traduzida com a marca declarada (ou, sem --brand, com o og:site_name que
+  // domina o idioma principal). Só roda com 2+ idiomas.
+  {
+    const langDe = (p) => String(p.lang || "").toLowerCase().slice(0, 2) || null;
+    const contagem = {};
+    for (const p of live) { const l = langDe(p); if (l) contagem[l] = (contagem[l] || 0) + 1; }
+    const idiomas = Object.keys(contagem);
+    if (idiomas.length >= 2) {
+      const principal = idiomas.sort((a, b) => contagem[b] - contagem[a])[0];
+      const dePrincipal = live.filter((p) => langDe(p) === principal);
+      const moda = (arr) => { const c = {}; arr.forEach((x) => { c[x] = (c[x] || 0) + 1; }); return Object.keys(c).sort((a, b) => c[b] - c[a])[0] || null; };
+      const marca = args.brand || moda(dePrincipal.map((p) => p.og?.siteName).filter(Boolean));
+      const mn = norm(marca || "");
+      const tem = (txt) => { const t = norm(txt); return !!t && (t.includes(mn) || mn.includes(t)); };
+      if (mn) {
+        const comMarcaNoTitulo = dePrincipal.filter((p) => tem(p.title)).length / (dePrincipal.length || 1);
+        const ruins = [];
+        for (const p of live.filter((x) => langDe(x) && langDe(x) !== principal)) {
+          const motivos = [];
+          if (p.og?.siteName && !tem(p.og.siteName)) motivos.push(`og:site_name "${p.og.siteName}"`);
+          const nomeEntidade = (p.entityNames || []).find((n) => !tem(n));
+          if (nomeEntidade) motivos.push(`schema name "${nomeEntidade}"`);
+          if (comMarcaNoTitulo >= 0.6 && p.title && !tem(p.title)) motivos.push(`<title> "${p.title.slice(0, 60)}"`);
+          if (motivos.length) ruins.push(`${p.url} → ${motivos.join(" · ")}`);
+        }
+        if (ruins.length) bad("marca", "brand.translated", "P1", `Nome da marca ("${marca}") alterado na versão traduzida de ${ruins.length} página(s)`,
+          `Nome próprio não se traduz. Tradutor automático (TranslatePress, WPML, Google Translate) trocou a marca nas versões fora do idioma principal (${principal}), e é isso que o buscador, a IA e o cartão de compartilhamento mostram. Em TranslatePress: Configurações → Tradução automática → lista de termos que nunca se traduzem, ou cadastre a marca como tradução manual. Confira os casos: se a marca é transliterada de propósito (outro alfabeto), ignore.`,
+          ruins.slice(0, 6).join("\n"));
+        else ok("marca", "brand.translated", "P1", `Marca "${marca}" preservada nas versões traduzidas`);
+      }
+    }
   }
 
   // Roll-up dos achados por página pros eixos (o score precisa vê-los).
@@ -1543,7 +1646,7 @@ function writeReports(outDir, payload) {
       round: Number(args.round) || 1,
       timestamp: new Date().toISOString(),
       durationMs: Date.now() - t0,
-      pagesAudited: pages.length,
+      pagesAudited: pages.filter((p) => !p.nonHtml).length,
       canonicalHost: ctx.canonicalHost,
     },
     scores, findings, pages, site,

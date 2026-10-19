@@ -109,3 +109,16 @@ Molde que se preze aceita o ID de medição por variável de ambiente e **avisa 
 Os seis têm a mesma raiz: **o molde carrega decisões da marca que o originou, e a troca de marca só alcança o que está visível na tela.** Texto dentro de componente, arquivo que só robô lê, componente-maquete com nome de componente-real, variável de ambiente vazia — nada disso aparece olhando o site.
 
 Toda auditoria de site nascido de molde começa perguntando **de qual molde ele nasceu**, testa o que não se vê (formulário, medição, `llms.txt`, `canonical`), e termina corrigindo o molde — não só o filho.
+
+---
+
+## Apêndice · um furo que o auditor deixava passar: marca traduzida por máquina
+
+**O caso (2026-09-23).** Um site WordPress com TranslatePress, em português e espanhol. Na versão `/es/`, o tradutor automático trocou o **nome da marca** (um nome próprio de duas palavras) por uma tradução literal, no `og:site_name`, no `name` do schema `Organization` e nos títulos. O eixo de marca deu nota boa, porque só conferia se o nome **existia** (no idioma principal) e nunca olhou as versões traduzidas.
+
+**Por que importa.** O `og:site_name` é o nome que aparece no cartão de compartilhamento, e o `name` do schema é o que a IA lê para saber quem a empresa é. Numa versão traduzida, a IA aprende um nome de empresa que não existe.
+
+**Como pegar (`brand.translated`, P1, eixo de marca).** Com dois ou mais idiomas nas páginas, o auditor define o idioma principal (o mais frequente), toma a marca declarada em `--brand` (ou, sem ela, o `og:site_name` que domina o idioma principal) e confere as páginas dos outros idiomas em três lugares: `og:site_name`, `name` do schema e `<title>`. Este último só entra se a maioria dos títulos do idioma principal já carrega a marca, para não acusar quem nunca pôs a marca no título. Site de um idioma só não gera o check.
+
+**Limite.** Marca transliterada de propósito (para outro alfabeto) vai aparecer como achado; o texto do achado manda conferir. A correção no TranslatePress é cadastrar a marca na lista de termos que não se traduzem.
+

@@ -58,7 +58,7 @@ Se quiser, dá pra emendar tudo numa mensagem só:
 
 **Duas coisas que valem saber:**
 
-- **O teste (`smoke.mjs`) não é frescura.** Ele monta um site de mentira cheio de defeitos, audita e confere dezenas de propriedades (51 na versão atual). Tem que terminar em **`OK`**. Auditor quebrado não dá erro — ele dá **conforto falso**: diz que está tudo bem e você acredita. Cinco segundos ali valem mais que a auditoria inteira.
+- **O teste (`smoke.mjs`) não é frescura.** Ele monta um site de mentira cheio de defeitos, audita e confere dezenas de propriedades (69 na versão atual). Tem que terminar em **`OK`**. Auditor quebrado não dá erro — ele dá **conforto falso**: diz que está tudo bem e você acredita. Cinco segundos ali valem mais que a auditoria inteira.
 - **A skill fica registrada de verdade na próxima vez que você abrir o Claude Code.** Na sessão em que você instalou, ele já consegue usar (lendo os arquivos direto), então não precisa parar nada no meio.
 
 <details>

@@ -4,7 +4,7 @@ Todo check deste arquivo é sobre **você**, não sobre o site. São armadilhas 
 
 Isso é pior que não achar o problema. Achado falso gasta o tempo de quem vai corrigir, e depois de dois deles a pessoa para de ler o relatório inteiro — inclusive os P0 verdadeiros.
 
-**As onze abaixo são erros reais, cometidos em campo ou prescritos por guias desatualizados, cada um a poucos segundos de virar um achado inventado num relatório entregue.**
+**As dezessete abaixo são erros reais, cometidos em campo ou prescritos por guias desatualizados, cada um a poucos segundos de virar um achado inventado num relatório entregue.**
 
 ---
 
@@ -114,7 +114,57 @@ O Google diz que ignora o arquivo, e nenhum buscador de IA declara ler o de terc
 
 ---
 
-## A regra que resume as onze
+## B12 · O ID repetido no texto não é a tag carregada duas vezes
+
+**Se** o mesmo código de medição (`GTM-...`, `G-...`) aparece muitas vezes no HTML, **não conclua** que a visita é contada em dobro.
+
+Contar quantas vezes a *string do ID* aparece é medir a coisa errada. Plugins de rastreamento (o PixelYourSite, no WordPress) escrevem o ID no JSON de configuração de cada evento: 12 ocorrências por página, para **um** container carregado **uma** vez. No caso real isso acusou "medição duplicada" em 582 de 583 páginas.
+
+**Conte instaladores, não o ID:** o `<script>` que carrega a tag (`gtag/js?id=`, o snippet do GTM, `ga('create', ...)`). O `<noscript><iframe ...ns.html?id=GTM-...>` é o par do snippet, não um segundo. Dois snippets do mesmo ID continuam sendo duplicação de verdade, e o smoke garante que isso segue acusado.
+
+---
+
+## B13 · `todo:` é uma palavra, não um marcador de rascunho
+
+**Se** o texto da página contém `todo:`, **não conclua** que sobrou um TODO de desenvolvedor.
+
+Em espanhol, galego e português, *todo* quer dizer "tudo" ("Nos ocupamos de absolutamente todo: transporte, aduana y seguro"). Casar a palavra sem distinguir caixa e sem olhar o idioma deu um **P0 falso** ("placeholder visível") numa página que estava correta. Só `TODO:` e `FIXME` em CAIXA ALTA contam, e em página `es`/`pt`/`gl`/`ca` só o `FIXME`, porque até o `TODO:` maiúsculo é frase normal ali ("Hacemos TODO: del embalaje a la entrega"). O TODO esquecido de verdade fica por conta da varredura de código (`--repo`).
+
+---
+
+## B14 · Nem tudo que está no sitemap é uma página
+
+**Se** a URL do sitemap responde 200, **não conclua** que é HTML para auditar.
+
+O Rank Math lista `/locations.kml` (arquivo de mapa) no sitemap de SEO local. Auditado como página, gerou cerca de dez achados falsos (sem title, sem H1, sem `lang`, sem canonical, sem schema) e ainda derrubou a cobertura de medição para "582 de 583". O auditor agora olha o `Content-Type`: o que não é HTML sai do denominador e aparece em *Não medido* (`pages.nonhtml`), dito às claras, sem sumir.
+
+---
+
+## B15 · "A primeira `image` do schema" pode ser foto de pessoa
+
+**Se** o grafo de schema tem uma `image`, **não conclua** que é a imagem principal da página.
+
+O schema do Rank Math traz um nó `Person` (o autor) com a foto do Gravatar, 96×96. Pegar a primeira `image` do grafo acusou "imagem principal com menos de 1200px" numa página cuja capa tinha 1344px. **Só contam** a `image` do `Article`/`BlogPosting`/`NewsArticle`, a `primaryImageOfPage` do `WebPage` e a `og:image`. E o Rank Math referencia por `@id` (`"image": {"@id": ".../#primaryImage"}`), então a referência é resolvida contra os nós do grafo antes de medir.
+
+---
+
+## B16 · Link de oEmbed não é feed nem sitemap
+
+**Se** o `<head>` tem `<link rel="alternate" type="text/xml+oembed">`, **não conclua** que é um feed declarado.
+
+O WordPress emite dois deles. O tipo contém "xml", e um filtro frouxo (`/rss|atom|xml/`) os tratou como feed, produzindo "N sitemaps/feeds declarados que não respondem 200". O oEmbed é o endereço que **outro site** usa para mostrar a prévia do link (Slack, Notion, outro WordPress). Fora do ar, só a prévia some: não mexe em Google nem em busca de IA. Agora fica fora do `feeds.alive` e tem o próprio achado, `oembed.alive`, P2, checado por amostra de cinco endereços.
+
+---
+
+## B17 · Schema `Article` não faz um post
+
+**Se** a página tem schema `Article`, **não conclua** que é post de blog.
+
+Rank Math e Yoast aplicam `Article` a páginas de serviço. Cobrar "data de publicação", autor e `dateModified` de uma página de serviço é cobrar o que ela nunca deveria ter. Agora é post quem tem `BlogPosting`/`NewsArticle`, ou `Article` com `datePublished` ou `og:type=article`, ou URL de blog. Limite assumido: um `Article` genuíno, sem data e com `og:type=website`, deixa de ser cobrado; é a troca de um falso positivo frequente por um falso negativo raro, e este arquivo existe para fazer essa troca de olhos abertos.
+
+---
+
+## A regra que resume as dezessete
 
 Toda conclusão precisa passar por: **eu medi isso, ou eu deduzi isso?**
 

@@ -209,6 +209,86 @@ const vivo = res3 === 0 && fs.existsSync(path.join(OUT3, "audit-report.json"))
   : null;
 const acheVivo = (id) => (vivo?.findings || []).find((f) => f.id === id) || null;
 
+
+// --- 4ª rodada: o site WordPress que o auditor acusou errado ----------------
+// WordPress + Elementor + PixelYourSite + Rank Math + TranslatePress. Cada
+// fixture abaixo reproduz um achado que, numa auditoria real de 583 URLs, foi
+// conferido à mão e era FALSO (cicatrizes F1-F7 em references/como-nao-reportar-mentira.md).
+// Cada caso tem o par: o falso que não pode mais sair E o verdadeiro que não
+// pode deixar de sair (corrigir falso positivo sem o par vira falso negativo).
+const PORT2 = 36771 + (process.pid % 800);
+const ORIGIN2 = `http://127.0.0.1:${PORT2}`;
+const GTM = "GTM-ABC1234";
+const png = (w, h) => {
+  const b = Buffer.alloc(33);
+  b.writeUInt32BE(0x89504e47, 0); b.writeUInt32BE(0x0d0a1a0a, 4); b.writeUInt32BE(13, 8);
+  b.write("IHDR", 12, "latin1"); b.writeUInt32BE(w, 16); b.writeUInt32BE(h, 20);
+  return b;
+};
+// O PixelYourSite escreve o ID do container no JSON de config de CADA evento.
+const pysJson = Array.from({ length: 12 }, (_, i) => `"ev${i}":{"trackingIds":["${GTM}"],"name":"e${i}"}`).join(",");
+const gtmSnippet = `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${GTM}');</script>`;
+const medicaoWP = `<script>var pysOptions={"staticEvents":{${pysJson}}};</script>\n${gtmSnippet}`;
+const noscriptGTM = `<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${GTM}" height="0" width="0"></iframe></noscript>`;
+const graphRankMath = (title, tipo, extra = {}) => JSON.stringify({ "@context": "https://schema.org", "@graph": [
+  { "@type": "Organization", "@id": `${ORIGIN2}/#org`, name: extra.org || "Ponte Leste", url: ORIGIN2 },
+  // O autor tem foto de Gravatar (96px). Ela NÃO é a imagem da página.
+  { "@type": "Person", "@id": `${ORIGIN2}/#autor`, name: "Ana Souza", image: { "@type": "ImageObject", "@id": `${ORIGIN2}/#avatar`, url: `${ORIGIN2}/gravatar.png`, caption: "Ana Souza" } },
+  { "@type": "ImageObject", "@id": `${ORIGIN2}/#primaryImage`, url: `${ORIGIN2}/capa-grande.png`, width: 1344, height: 800 },
+  { "@type": "WebPage", "@id": `${ORIGIN2}/#webpage`, name: title, primaryImageOfPage: { "@id": `${ORIGIN2}/#primaryImage` } },
+  { "@type": tipo, headline: title, author: { "@id": `${ORIGIN2}/#autor` }, image: { "@id": `${ORIGIN2}/#primaryImage` }, ...(extra.date ? { datePublished: extra.date } : {}) },
+] });
+const paginaWP = ({ lang = "pt-BR", title, siteName = "Ponte Leste", ogType = "website", tipo = "Article", org, texto = "", medicao = medicaoWP }) => `<!doctype html>
+<html lang="${lang}"><head><meta charset="utf-8"><title>${title}</title>
+<meta name="description" content="Mudancas internacionais com acompanhamento de ponta a ponta, do orcamento ao desembaraco na alfandega e a entrega na porta de casa.">
+<meta property="og:site_name" content="${siteName}"><meta property="og:type" content="${ogType}">
+<meta property="og:title" content="${title}"><meta property="og:image" content="${ORIGIN2}/capa-grande.png">
+<link rel="alternate" type="application/rss+xml" href="${ORIGIN2}/feed.xml">
+<link rel="alternate" type="application/json+oembed" href="${ORIGIN2}/wp-json/oembed/1.0/embed?url=x">
+<link rel="alternate" type="text/xml+oembed" href="${ORIGIN2}/wp-json/oembed/1.0/embed?url=x&format=xml">
+<script type="application/ld+json">${graphRankMath(title, tipo, { org, date: null })}</script>
+${medicao}
+</head><body>${noscriptGTM}<main><h1>${title}</h1><p>${texto}</p><a href="/">Inicio</a></main></body></html>`;
+const BLOG = (title) => paginaWP({ title, tipo: "BlogPosting", ogType: "article" });
+const rotasWP = {
+  "/": ["text/html; charset=utf-8", paginaWP({ title: "Mudancas internacionais | Ponte Leste", texto: "Cuidamos da sua mudanca." })],
+  "/servicos/": ["text/html; charset=utf-8", paginaWP({ title: "Servicos de mudanca | Ponte Leste", tipo: "Article", texto: "Pagina de servico, nao e post." })],
+  "/novidades/guia-de-mudanca/": ["text/html; charset=utf-8", BLOG("Guia de mudanca internacional | Ponte Leste")],
+  "/duplicada/": ["text/html; charset=utf-8", paginaWP({ title: "Pagina com GTM em dobro | Ponte Leste", medicao: medicaoWP + "\n" + gtmSnippet })],
+  "/es/": ["text/html; charset=utf-8", paginaWP({ lang: "es-ES", title: "Puente Este | Mudanzas internacionales", siteName: "Puente Este", org: "Puente Este", texto: "Nos ocupamos de absolutamente todo: transporte, aduana y seguro. Hacemos TODO: desde el embalaje hasta la entrega." })],
+  "/en/": ["text/html; charset=utf-8", paginaWP({ lang: "en-US", title: "International moves | Ponte Leste", texto: "TODO: write the copy for this section" })],
+  "/es/servicios/": ["text/html; charset=utf-8", paginaWP({ lang: "es-ES", title: "Servicios de mudanza | Ponte Leste", texto: "Servicios con la marca intacta." })],
+  "/locations.kml": ["application/vnd.google-earth.kml+xml", `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Ponte Leste</name></Document></kml>`],
+  "/feed.xml": ["application/rss+xml", `<rss version="2.0"><channel><title>Ponte Leste</title></channel></rss>`],
+  "/robots.txt": ["text/plain", `User-agent: *\nAllow: /\nSitemap: ${ORIGIN2}/sitemap.xml\n`],
+  "/sitemap.xml": ["application/xml", `<urlset>${["/", "/servicos/", "/novidades/guia-de-mudanca/", "/duplicada/", "/es/", "/es/servicios/", "/en/", "/locations.kml"].map((u) => `<url><loc>${ORIGIN2}${u}</loc></url>`).join("")}</urlset>`],
+  "/capa-grande.png": ["image/png", png(1344, 800)],
+  "/gravatar.png": ["image/png", png(96, 96)],
+};
+const srvWP = createServer((req, res) => {
+  const rota = rotasWP[req.url.split("?")[0]];
+  if (!rota) { res.writeHead(404, { "content-type": "text/html" }); res.end("<h1>nao existe</h1>"); return; }
+  res.writeHead(200, { "content-type": rota[0] });
+  res.end(rota[1]);
+});
+await new Promise((r) => srvWP.listen(PORT2, "127.0.0.1", r));
+const OUT4 = path.join(TMP, "out4");
+const res4 = await new Promise((resolve) => {
+  const c = spawn(process.execPath, [
+    path.join(HERE, "audit.mjs"), "--url", `${ORIGIN2}/`,
+    "--brand", "Ponte Leste", "--sector", "mudancas internacionais", "--out", OUT4,
+  ]);
+  c.on("close", (code) => resolve(code));
+  c.on("error", () => resolve(-1));
+});
+srvWP.close();
+const wp = res4 === 0 && fs.existsSync(path.join(OUT4, "audit-report.json"))
+  ? JSON.parse(fs.readFileSync(path.join(OUT4, "audit-report.json"), "utf8"))
+  : null;
+const acheWP = (id) => (wp?.findings || []).find((f) => f.id === id) || null;
+const paginaWPde = (rota) => (wp?.pages || []).find((p) => p.url === `${ORIGIN2}${rota}`) || null;
+const msgsWP = (rota) => (paginaWPde(rota)?.issues || []).map((i) => i.msg).join("\n");
+
 // ------------------------------------------------------------------ asserts -
 const casos = [
   // [descrição, condição verdadeira = passou]
@@ -291,6 +371,38 @@ const casos = [
     vivo !== null && !/Todas as URLs/.test(acheVivo("sitemap.status")?.title || "")],
   ["a URL que respondeu 200 continua contada como 200",
     /1 URL\(s\) medidas devolvem 200/.test(acheVivo("sitemap.status")?.title || "")],
+
+  // --- 4ª rodada: WordPress (cada falso positivo real, com o seu par) --------
+  ["WP: a auditoria do site WordPress roda até o fim", wp !== null],
+  // F1 · o ID do GTM aparece 12× no JSON do PixelYourSite e é UM container só
+  ["F1 · ID do GTM repetido no JSON de config NÃO vira 'medição duplicada'", wp !== null && !/Código de medição/.test(msgsWP("/"))],
+  ["F1 · dois snippets do MESMO GTM continuam acusados (o par verdadeiro)", wp !== null && /Código de medição/.test(msgsWP("/duplicada/"))],
+  // F2 · "todo:" é palavra comum em espanhol e português
+  ["F2 · 'todo:' e 'TODO:' em texto espanhol NÃO são placeholder", wp !== null && !/Placeholder/.test(msgsWP("/es/"))],
+  ["F2 · 'TODO:' em página em inglês continua acusado (o par verdadeiro)", /Placeholder/.test(msgsWP("/en/"))],
+  // F3 · /locations.kml (Rank Math) no sitemap
+  ["F3 · .kml do sitemap não é auditado como página HTML (zero achados nele)",
+    paginaWPde("/locations.kml")?.nonHtml !== undefined && (paginaWPde("/locations.kml")?.issues || []).length === 0],
+  ["F3 · .kml fora do denominador: 'medição presente' não vira N-1/N", acheWP("analytics.coverage")?.status === "pass"],
+  ["F3 · o que ficou de fora sai como 'não medido', não some em silêncio", acheWP("pages.nonhtml")?.status === "skip"],
+  // F4 · a foto do autor (Gravatar 96px) não é a imagem principal da página
+  ["F4 · foto do autor (96px) não entra como imagem principal", acheWP("img.mainsize")?.status === "pass"
+    && !(paginaWPde("/servicos/")?.mainImages || []).some((m) => /gravatar/.test(m.url))],
+  ["F4 · a imagem do Article (via @id → ImageObject) continua sendo medida",
+    (paginaWPde("/servicos/")?.mainImages || []).some((m) => /capa-grande/.test(m.url))],
+  // F5 · oEmbed não é sitemap nem feed
+  ["F5 · link oEmbed (text/xml+oembed) NÃO conta como 'sitemap/feed declarado'", acheWP("feeds.alive")?.status === "pass"],
+  ["F5 · oEmbed fora do ar vira achado próprio, P2, com rótulo certo",
+    acheWP("oembed.alive")?.status === "fail" && acheWP("oembed.alive")?.severity === "P2" && /oEmbed/.test(acheWP("oembed.alive")?.title || "")],
+  // F6 · Article em página de serviço não é post de blog
+  ["F6 · página de serviço com schema Article NÃO é cobrada como post", wp !== null && !/Post (de blog )?sem/.test(msgsWP("/servicos/"))],
+  ["F6 · BlogPosting sem datePublished continua acusado (o par verdadeiro)", /sem data de publicação/.test(msgsWP("/novidades/guia-de-mudanca/"))],
+  // F7 · o furo: marca traduzida por máquina na versão /es/
+  ["F7 · acusa marca traduzida na versão /es/ (og:site_name, schema e título)",
+    acheWP("brand.translated")?.status === "fail" && new RegExp(`${ORIGIN2}/es/ →`).test(acheWP("brand.translated")?.evidence || "")
+    && /Puente Este/.test(acheWP("brand.translated")?.evidence || "")],
+  ["F7 · versão traduzida com a marca intacta NÃO é acusada", !new RegExp(`${ORIGIN2}/es/servicios/ →`).test(acheWP("brand.translated")?.evidence || "")],
+  ["F7 · site de um idioma só não gera o check", limpo !== null && !limpo.findings.some((f) => f.id === "brand.translated")],
 ];
 
 let falhou = 0;
