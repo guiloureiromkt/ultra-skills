@@ -103,6 +103,8 @@ O que cada pedaço faz:
 | `--out` | onde salvar o relatório |
 | `--forbid` | palavras que não podem aparecer (o nome da empresa do template, por exemplo) |
 | `--allow` | marca de terceiro que você cita **de propósito** (seu cliente, seu empregador) |
+| `--urls` | um arquivo com as páginas a auditar, uma por linha (endereço completo ou só `/pagina.html`; `#` comenta). **Use em homologação** ou quando o auditor achar menos páginas do que o site tem |
+| `--all-hosts` | também audita as URLs do sitemap que estão em **outro endereço**. Por padrão ficam de fora e aparecem como "não medido" |
 
 > ### 🔴 Sobre o `--repo`: sem ele você não vê metade
 > O defeito mais caro que existe num site é o **formulário que mostra "recebemos sua mensagem" e joga o contato fora**. Ninguém reclama, porque quem enviou acha que enviou — e você acha que ninguém procurou. Pode durar anos.

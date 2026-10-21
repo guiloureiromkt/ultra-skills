@@ -175,7 +175,7 @@ const ROBOTS_ARMADILHA = [
 
 const SITEMAP_VIVO = `<urlset>
 <url><loc>${ORIGIN}/boa.html</loc><lastmod>2026-07-20</lastmod></url>
-<url><loc>http://127.0.0.1:${PORTA_MORTA}/inalcancavel.html</loc></url>
+<url><loc>${ORIGIN}/derruba.html</loc></url>
 </urlset>`;
 
 const htmlBoa = fs.readFileSync(path.join(SITE, "boa.html"), "utf8");
@@ -187,6 +187,8 @@ const rotas = {
 };
 const { createServer } = await import("node:http");
 const srv = createServer((req, res) => {
+  // Mesmo host, mas a conexão cai no meio: falha de fetch de verdade, sem status HTTP.
+  if (req.url.startsWith("/derruba.html")) { req.socket.destroy(); return; }
   const rota = rotas[req.url.split("?")[0]];
   if (!rota) { res.writeHead(404, { "content-type": "text/html" }); res.end("<h1>nao existe</h1>"); return; }
   res.writeHead(200, { "content-type": rota[0] });
@@ -288,6 +290,75 @@ const wp = res4 === 0 && fs.existsSync(path.join(OUT4, "audit-report.json"))
 const acheWP = (id) => (wp?.findings || []).find((f) => f.id === id) || null;
 const paginaWPde = (rota) => (wp?.pages || []).find((p) => p.url === `${ORIGIN2}${rota}`) || null;
 const msgsWP = (rota) => (paginaWPde(rota)?.issues || []).map((i) => i.msg).join("\n");
+
+// --- 5ª rodada: o site de homologação (Iza Criativa, outubro/2026) ----------
+// Site em ambiente de teste, sitemap já com o domínio final. Cada fixture é um
+// erro real daquela auditoria, com o par verdadeiro que não pode sumir:
+//   G1 · sitemap com URL de OUTRO host contaminou a nota (62 páginas, 27 "sem H1")
+//   G2 · link só com ícone e aria-label contado como "sem texto âncora"
+//   G3 · player próprio (botão de play) tratado como "vídeo sem controles"
+//   G4 · noindex em página de link na bio acusado como P0
+//   G5 · cabeçalho x-robots-tag: none (a meta tag não existe) passava batido
+const PORT3 = 38771 + (process.pid % 800);
+const ORIGIN3 = `http://127.0.0.1:${PORT3}`;
+const videoLd = (n) => `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "VideoObject", name: n, description: "Depoimento em video de uma cliente satisfeita com o trabalho", thumbnailUrl: `${ORIGIN3}/poster.png`, contentUrl: `${ORIGIN3}/v.mp4`, uploadDate: "2026-10-01" })}</script>`;
+const paginaH = ({ title, corpo = "", robots = "max-image-preview:large, max-snippet:-1", extraHead = "" }) => `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><title>${title}</title>
+<meta name="description" content="Estudio de identidade visual para profissionais que querem parecer o que entregam, com projetos de marca, social media e papelaria completa.">
+<meta name="robots" content="${robots}">
+${extraHead}</head><body><main><h1>${title}</h1><p>Texto da pagina de homologacao com conteudo suficiente para nao ser acusada de fina.</p>${corpo}</main></body></html>`;
+const rotas3 = {
+  "/home.html": ["text/html; charset=utf-8", paginaH({ title: "Home do estudio de teste", extraHead: videoLd("Depoimento da Ana"), corpo:
+    `<a href="/insta" aria-label="Instagram do estudio"><svg viewBox="0 0 8 8"><path d="M0 0h8v8z"/></svg></a>` +
+    `<a href="/zap"><img src="/i.png" alt="Falar no WhatsApp"></a>` +
+    `<a href="/vazio"></a>` +
+    `<video src="/v.mp4" poster="/poster.png" preload="none" playsinline></video><button type="button" class="vc-play" aria-label="Assistir ao depoimento de Ana"></button>` })],
+  "/decor.html": ["text/html; charset=utf-8", paginaH({ title: "Pagina com video decorativo", extraHead: videoLd("Fundo animado"), corpo:
+    `<video src="/v.mp4" muted loop autoplay playsinline></video>` })],
+  "/bio/": ["text/html; charset=utf-8", paginaH({ title: "Links do estudio", robots: "noindex, nofollow", corpo: `<a href="/home.html">Home</a>` })],
+  "/privado.html": ["text/html; charset=utf-8", paginaH({ title: "Pagina de conteudo escondida", robots: "noindex, nofollow", corpo: `<a href="/home.html">Home</a>` })],
+  "/xrt.html": ["text/html; charset=utf-8", paginaH({ title: "Pagina com cabecalho que bloqueia", corpo: `<a href="/home.html">Home</a>` }), { "x-robots-tag": ["none", "none"] }],
+  "/ok.html": ["text/html; charset=utf-8", paginaH({ title: "Pagina normal sem cabecalho", corpo: `<a href="/home.html">Home</a>` })],
+  "/robots.txt": ["text/plain", `User-agent: *\nAllow: /\nSitemap: ${ORIGIN3}/sitemap.xml\n`],
+  "/sitemap.xml": ["application/xml", `<urlset>${["/home.html", "/decor.html", "/bio/", "/privado.html", "/xrt.html", "/ok.html"].map((u) => `<url><loc>${ORIGIN3}${u}</loc></url>`).join("")}<url><loc>https://www.exemplo-final-inexistente.test/antigo.html</loc></url><url><loc>http://127.0.0.1:${PORTA_MORTA}/outro-host.html</loc></url></urlset>`],
+  "/poster.png": ["image/png", png(1280, 720)],
+};
+const srv3 = createServer((req, res) => {
+  const rota = rotas3[req.url.split("?")[0]];
+  if (!rota) { res.writeHead(404, { "content-type": "text/html" }); res.end("<h1>nao existe</h1>"); return; }
+  res.writeHead(200, { "content-type": rota[0], ...(rota[2] || {}) });
+  res.end(rota[1]);
+});
+await new Promise((r) => srv3.listen(PORT3, "127.0.0.1", r));
+const rodar = (extra, out) => new Promise((resolve) => {
+  const c = spawn(process.execPath, [path.join(HERE, "audit.mjs"), "--url", `${ORIGIN3}/`, "--brand", "Estudio de Teste", "--sector", "identidade visual", "--out", out, ...extra]);
+  c.on("close", (code) => resolve(code));
+  c.on("error", () => resolve(-1));
+});
+const OUT5 = path.join(TMP, "out5");
+const res5 = await rodar([], OUT5);
+// Segunda rodada: --urls restringe a auditoria a uma lista, ignorando o sitemap.
+const LISTA = path.join(TMP, "paginas.txt");
+fs.writeFileSync(LISTA, `# páginas do ambiente de teste\n${ORIGIN3}/home.html\n/ok.html\n\n`);
+const OUT6 = path.join(TMP, "out6");
+const res6 = await rodar(["--urls", LISTA], OUT6);
+// spawn assíncrono de propósito: spawnSync trava o event loop deste processo, e o servidor de mentira mora aqui.
+const resSemArquivo = await new Promise((resolve) => {
+  const c = spawn(process.execPath, [path.join(HERE, "audit.mjs"), "--url", `${ORIGIN3}/`, "--urls", path.join(TMP, "nao-existe.txt"), "--out", path.join(TMP, "out7")]);
+  let stderr = "";
+  c.stderr.on("data", (d) => { stderr += d; });
+  c.on("close", (status) => resolve({ status, stderr }));
+  c.on("error", () => resolve({ status: -1, stderr }));
+});
+srv3.close();
+const lerRel = (code, out) => code === 0 && fs.existsSync(path.join(out, "audit-report.json"))
+  ? JSON.parse(fs.readFileSync(path.join(out, "audit-report.json"), "utf8")) : null;
+const hom = lerRel(res5, OUT5);
+const homLista = lerRel(res6, OUT6);
+const acheHom = (id) => (hom?.findings || []).find((f) => f.id === id) || null;
+const paginaHom = (rota) => (hom?.pages || []).find((p) => p.url === `${ORIGIN3}${rota}`) || null;
+const issuesHom = (rota) => paginaHom(rota)?.issues || [];
+const msgsHom = (rota) => issuesHom(rota).map((i) => i.msg).join("\n");
 
 // ------------------------------------------------------------------ asserts -
 const casos = [
@@ -403,6 +474,31 @@ const casos = [
     && /Puente Este/.test(acheWP("brand.translated")?.evidence || "")],
   ["F7 · versão traduzida com a marca intacta NÃO é acusada", !new RegExp(`${ORIGIN2}/es/servicios/ →`).test(acheWP("brand.translated")?.evidence || "")],
   ["F7 · site de um idioma só não gera o check", limpo !== null && !limpo.findings.some((f) => f.id === "brand.translated")],
+  // --- 5ª rodada: homologação (G1-G5, cada um com o seu par) ------------------
+  ["G · a auditoria do site de homologação roda até o fim", hom !== null],
+  ["G1 · URL do sitemap em OUTRO host NÃO é auditada (a nota é do site que você apontou)",
+    hom !== null && hom.pages.every((p) => p.url.startsWith(ORIGIN3))],
+  ["G1 · o que ficou de fora sai como 'não medido', com o host e como incluir",
+    acheHom("sitemap.foreignhost")?.status === "skip" && /exemplo-final-inexistente\.test/.test(JSON.stringify(acheHom("sitemap.foreignhost")))],
+  ["G1 · as 6 páginas do próprio host foram auditadas", hom !== null && hom.pages.length === 6],
+  ["G1 · --urls audita só a lista (absoluta e relativa, ignora # e linha vazia)",
+    homLista !== null && homLista.pages.length === 2 && homLista.pages.every((p) => p.url.startsWith(ORIGIN3))],
+  ["G2 · link só com ícone + aria-label e link com <img alt> NÃO são 'sem texto âncora'",
+    /1 link\(s\) sem texto âncora/.test(msgsHom("/home.html"))],
+  ["G2 · o link realmente vazio continua acusado (o par verdadeiro)", /sem texto âncora/.test(msgsHom("/home.html"))],
+  ["G3 · vídeo com botão de play próprio NÃO é 'VideoObject sem vídeo assistível'",
+    hom !== null && !/VideoObject` numa página sem vídeo/.test(msgsHom("/home.html"))],
+  ["G3 · vídeo decorativo (autoplay muted loop) continua acusado (o par verdadeiro)",
+    /VideoObject` numa página sem vídeo/.test(msgsHom("/decor.html"))],
+  ["G · --urls com arquivo inexistente falha com mensagem clara, não com stack trace",
+    resSemArquivo.status === 2 && /Não consegui abrir o arquivo de páginas/.test(resSemArquivo.stderr) && !/at Object\.readFileSync/.test(resSemArquivo.stderr)],
+  ["G4 · noindex em página de link na bio (/bio/) NÃO é P0",
+    hom !== null && issuesHom("/bio/").some((i) => /noindex/.test(i.msg)) && !issuesHom("/bio/").some((i) => /noindex/.test(i.msg) && (i.severity || i.sev) === "P0")],
+  ["G4 · noindex em página de conteúdo continua P0 (o par verdadeiro)",
+    issuesHom("/privado.html").some((i) => /noindex/.test(i.msg) && (i.severity || i.sev) === "P0")],
+  ["G5 · x-robots-tag: none no cabeçalho é P0, mesmo sem meta robots, e cita a homologação",
+    issuesHom("/xrt.html").some((i) => /x-robots-tag/i.test(i.msg) && (i.severity || i.sev) === "P0" && /homologa/i.test(i.msg))],
+  ["G5 · página sem o cabeçalho não é acusada (o par verdadeiro)", hom !== null && !/x-robots-tag/i.test(msgsHom("/ok.html"))],
 ];
 
 let falhou = 0;

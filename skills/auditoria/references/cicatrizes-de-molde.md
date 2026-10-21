@@ -122,3 +122,18 @@ Toda auditoria de site nascido de molde começa perguntando **de qual molde ele 
 
 **Limite.** Marca transliterada de propósito (para outro alfabeto) vai aparecer como achado; o texto do achado manda conferir. A correção no TranslatePress é cadastrar a marca na lista de termos que não se traduzem.
 
+---
+
+## Apêndice · site em homologação: o auditor acusava o que não era defeito (2026-10)
+
+**O caso.** Um site de estúdio de design em ambiente de teste (túnel da Cloudflare), a caminho de outra hospedagem. A dona criou `sitemap.xml`, `robots.txt` e `llms.txt` já com o domínio final. A primeira auditoria saiu com 8 páginas de 32, e a segunda, depois que o sitemap passou a existir, saiu com 62 páginas, nota 59 e "27 páginas sem H1". As 30 a mais eram o **site antigo no ar**, que o auditor buscou porque estavam no `<loc>` do sitemap. Os achados, conferidos à mão, eram cinco, e todos corrigidos no `audit.mjs` (smoke, 5ª rodada, cada um com o seu par verdadeiro):
+
+1. **Sitemap com URL de outro host contaminava a nota (G1).** Agora só entra o host apontado em `--url` (`www` = apex). O que ficou de fora sai como "não medido" (`sitemap.foreignhost`), com os hosts e o `--all-hosts` pra incluir.
+2. **O crawler só segue um nível de links (G1).** Sem sitemap, achava 8 de 32 páginas. Agora existe `--urls arquivo.txt`, que audita só a lista.
+3. **Link só com ícone e `aria-label` era "sem texto âncora" (G2).** Ícone de Instagram e de WhatsApp tinham nome acessível. Agora `aria-label`, `title`, `<img alt>` e `<svg><title>` contam. Link realmente vazio continua acusado.
+4. **Player próprio era "VideoObject sem vídeo assistível" (G3).** Vídeo sem `controls`, mas com botão de play rotulado, não é decorativo. Autoplay mudo em loop sem botão continua acusado.
+5. **`noindex` em página de link na bio era P0 (G4).** Páginas `/bio`, `/links`, `/obrigado` costumam ser `noindex` de propósito, e viram P2 com o pedido de confirmar. `noindex` em página de conteúdo continua P0.
+
+**O furo que o auditor deixava passar (G5).** O site inteiro respondia `x-robots-tag: none` (duas vezes), que manda buscador e IA não indexarem, **sem nenhuma meta tag na página**. O auditor só olhava a meta. Agora o cabeçalho é lido: P0, com o aviso de que em homologação costuma ser de propósito e de que, no site no ar, o site some do Google. Conferir com `curl -I`.
+
+**A regra por trás.** Falso positivo e furo têm a mesma raiz: o auditor lia a forma e não o contexto. Antes de reportar um achado em site de homologação, abra o HTML e o cabeçalho, e separe o que é do ambiente de teste do que é do site.

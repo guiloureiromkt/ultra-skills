@@ -53,6 +53,9 @@ ultra-auditoria · audit.mjs
   --url   <https://...>   audita o site NO AR (segue sitemap/links)
   --dir   <caminho>       audita pasta estática local (html no disco)
   --base  <https://...>   (com --dir) URL pública, pra checar links absolutos
+  --urls  <arquivo>       (com --url) audita SÓ as páginas listadas (uma por linha, absoluta ou
+                          relativa, # comenta). Use em homologação ou quando o crawler acha pouco
+  --all-hosts             (com --url) também audita URL do sitemap em OUTRO host (por padrão fica de fora)
   --brand <"Nome">        nome da marca DECLARADA — usado no teste de resíduo
   --sector <"setor">      setor declarado (ex: "advocacia") — teste de coerência
   --forbid <"a,b,c">      termos que NÃO podem aparecer (marca de origem etc.)
@@ -337,7 +340,21 @@ function auditPage(pageUrl, html, headers, ctx) {
   // robots meta
   const robotsMeta = attr((metaBy("name", "robots") || {}).attrs || "", "content") || "";
   p.robotsMeta = robotsMeta;
-  if (/noindex/i.test(robotsMeta)) add("P0", "Página com noindex — invisível pro Google", robotsMeta);
+  // Página de link na bio e de agradecimento costuma ser noindex de propósito.
+  const paginaDeLink = /^\/(bio\w*|links?|linktree|obrigad[oa]|thanks?|thank-you|agradecimento)(\/|\.html)?$/i.test(new URL(pageUrl, "https://x").pathname);
+  if (/noindex/i.test(robotsMeta)) {
+    if (paginaDeLink) add("P2", "Página com noindex — parece ser de link na bio ou de agradecimento, onde isso costuma ser de propósito. Confirme", robotsMeta);
+    else add("P0", "Página com noindex — invisível pro Google", robotsMeta);
+  }
+  // O mesmo bloqueio pode vir no cabeçalho HTTP, sem nenhuma meta tag na página. `none` = noindex,nofollow.
+  if (headers) {
+    const xrt = headers.get("x-robots-tag") || "";
+    p.xRobotsTag = xrt;
+    if (/(^|[\s,:])(noindex|none)\b/i.test(xrt)) {
+      p.xRobotsBloqueia = true;
+      add(paginaDeLink ? "P2" : "P0", `Cabeçalho HTTP x-robots-tag: ${xrt} — manda buscador e IA não indexarem, mesmo sem meta robots. Em ambiente de homologação costuma ser de propósito; no site no ar, o site some do Google. Confirme que sai na migração (curl -I <url>)`, xrt);
+    }
+  }
   // nosnippet / max-snippet:0 tiram a página dos AI Overviews e do AI Mode (o Google diz
   // isso na doc de robots meta desde 2025) e rebaixam a citação no Bing/Copilot.
   const robotsTudo = metas.filter((m) => (attr(m.attrs, "name") || "").toLowerCase() === "robots").map((m) => attr(m.attrs, "content") || "").join(" ");
@@ -353,7 +370,7 @@ function auditPage(pageUrl, html, headers, ctx) {
   // Caso real: um site de 129 páginas sem essa linha ficou com Discover em ZERO por 90 dias,
   // com schema, autor e imagem 1344px já corretos. É 1 linha no <head>.
   const todasRobots = metas.filter((m) => (attr(m.attrs, "name") || "").toLowerCase() === "robots");
-  if (!/noindex/i.test(robotsMeta)) {
+  if (!/noindex/i.test(robotsMeta) && !p.xRobotsBloqueia) {
     if (!/max-image-preview\s*:\s*large/i.test(robotsMeta)) {
       add("P1", "sem 'max-image-preview:large' — o Google não serve card de imagem grande, e na prática a página quase não aparece no Discover", robotsMeta || "(nenhuma meta robots)");
     }
@@ -577,7 +594,11 @@ function auditPage(pageUrl, html, headers, ctx) {
   p.videos = { total: videos.length, comControls: videos.filter((v) => v.controls).length, schema: temVideoObject };
   if (temVideoObject) {
     const embed = /(youtube\.com\/embed|player\.vimeo\.com|<iframe[^>]+(youtu|vimeo))/i.test(H);
-    if (!videos.some((v) => v.controls) && !embed) {
+    // Player próprio: o vídeo não tem `controls`, mas há botão de play rotulado na página e ao menos
+    // um vídeo que não é autoplay decorativo. Autoplay muted loop sem botão segue acusado.
+    const botaoPlay = videos.some((v) => !v.autoplay)
+      && /<(button|a|div|span)\b[^>]*(aria-label=["'][^"']*(assistir|reproduzir|\bplay\b|watch|tocar|ver v[ií]deo)[^"']*["']|class=["'][^"']*\b(play|vc-play|video-play|btn-play)\b[^"']*["'])/i.test(H);
+    if (!videos.some((v) => v.controls) && !embed && !botaoPlay) {
       add("P1", "Schema `VideoObject` numa página sem vídeo assistível (nenhum <video controls> nem player incorporado) — o Google não conta como resultado de vídeo e o markup fica divergindo da página", `${videos.length} <video> na página, ${videos.filter((v) => v.autoplay).length} em autoplay decorativo`);
     }
   } else if (videos.some((v) => v.controls)) {
@@ -764,7 +785,11 @@ function auditPage(pageUrl, html, headers, ctx) {
   }
 
   // links internos
-  const anchors = tags(H, "a").map((a) => ({ href: attr(a.attrs, "href"), text: decode(visibleText(a.inner)).trim() }));
+  // Nome acessível de link sem texto: aria-label, title, <img alt>, <svg><title>. Ícone de rede social
+  // com aria-label não é link vazio.
+  const temNome = (a) => !!(attr(a.attrs, "aria-label") || attr(a.attrs, "aria-labelledby") || attr(a.attrs, "title")
+    || /<img\b[^>]*\balt=["'][^"']+["']/i.test(a.inner) || /<title>[^<]+<\/title>/i.test(a.inner));
+  const anchors = tags(H, "a").map((a) => ({ href: attr(a.attrs, "href"), text: decode(visibleText(a.inner)).trim(), named: temNome(a) }));
   p.links = { total: anchors.length, internal: [], external: 0, emptyText: 0 };
   for (const a of anchors) {
     if (!a.href || a.href.startsWith("#") || /^(mailto|tel|javascript):/i.test(a.href)) continue;
@@ -774,7 +799,7 @@ function auditPage(pageUrl, html, headers, ctx) {
     const interno = ctx.canonicalHost ? u.host === ctx.canonicalHost : !/^[a-z]+:\/\//i.test(a.href);
     if (interno) p.links.internal.push(u.toString().split("#")[0]);
     else p.links.external++;
-    if (!a.text) p.links.emptyText++;
+    if (!a.text && !a.named) p.links.emptyText++;
   }
   if (p.links.emptyText) add("P2", `${p.links.emptyText} link(s) sem texto âncora — nem o usuário nem o crawler sabem pra onde vão`);
   if (p.links.internal.length === 0) add("P1", "Página sem nenhum link interno — órfã no grafo do site");
@@ -796,6 +821,11 @@ async function discoverFromWeb(rootUrl, max) {
   const canonicalHost = root.host;
   const site = { canonicalHost, origin: root.origin };
   const urls = new Set();
+  // Sitemap já com o domínio final (comum em homologação) manda o auditor pro site antigo
+  // no ar e mistura as duas notas. Por padrão só entra o host que foi apontado; www = apex.
+  const semWww = (h) => h.replace(/^www\./i, "");
+  site.foreignHosts = {};
+  const listFile = typeof args.urls === "string" ? args.urls : null;
 
   // robots.txt
   const rb = await fetchChain(new URL("/robots.txt", root).toString());
@@ -821,11 +851,30 @@ async function discoverFromWeb(rootUrl, max) {
     const lastmods = [...r.body.matchAll(/<lastmod>\s*([^<]+?)\s*<\/lastmod>/gi)].map((m) => m[1]);
     site.sitemaps.push({ url: sm, ok: true, entries: locs.length, index: isIndex, lastmod: lastmods.length > 0, lastmods });
     if (isIndex) queue.push(...locs.slice(0, 10));
-    else locs.forEach((l) => urls.add(l.split("#")[0]));
+    else locs.forEach((l) => {
+      const u = l.split("#")[0];
+      let h; try { h = new URL(u).host; } catch { urls.add(u); return; }
+      if (args["all-hosts"] || semWww(h) === semWww(canonicalHost)) urls.add(u);
+      else site.foreignHosts[h] = (site.foreignHosts[h] || 0) + 1;
+    });
+  }
+
+  // --urls: a lista do dono manda; o sitemap continua sendo auditado como arquivo, não como fonte de páginas
+  if (listFile) {
+    let texto;
+    try { texto = fs.readFileSync(listFile, "utf8"); }
+    catch { console.error(`\nNão consegui abrir o arquivo de páginas de --urls: ${listFile}\nConfira o caminho. O arquivo é um .txt com uma página por linha.\n`); process.exit(2); }
+    urls.clear();
+    for (const raw of texto.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      try { urls.add(new URL(line, root).toString().split("#")[0]); } catch {}
+    }
+    site.urlsFile = listFile;
   }
 
   // fallback: varrer links a partir da home
-  if (urls.size === 0) {
+  if (urls.size === 0 && !listFile) {
     const home = await fetchChain(root.toString());
     urls.add(home.url);
     if (home.body) {
@@ -837,7 +886,7 @@ async function discoverFromWeb(rootUrl, max) {
     }
   }
   site.llms = await fetchChain(new URL("/llms.txt", root).toString());
-  return { site, urls: [...urls].slice(0, max) };
+  return { site, urls: [...urls].slice(0, listFile ? 500 : max) };
 }
 
 function discoverFromDir(dir, max) {
@@ -1381,6 +1430,10 @@ function writeReports(outDir, payload) {
     console.error(`→ descobrindo URLs em ${root.origin} …`);
     const d = await discoverFromWeb(args.url, args.max);
     site = d.site;
+    const fora = Object.entries(site.foreignHosts || {});
+    if (fora.length) skip("seo_tecnico", "sitemap.foreignhost", "P2",
+      `${fora.reduce((a, [, n]) => a + n, 0)} URL(s) do sitemap apontam pra outro host e ficaram fora da auditoria`,
+      `Hosts: ${fora.map(([h, n]) => `${h} (${n})`).join(", ")}. O auditor só audita o host que você apontou (${root.host}); sitemap já com o domínio final é normal em homologação. Pra auditar esses endereços também, rode com --all-hosts.`);
     console.error(`→ ${d.urls.length} URL(s) na fila. Auditando …`);
     const results = await pool(d.urls, args.concurrency, async (u) => {
       const r = await fetchChain(u);
